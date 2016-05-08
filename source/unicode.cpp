@@ -596,8 +596,17 @@ int GetUnicodeCharABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT ch, ABC *abc)
 	int idx = GetUnicodeGlyphIndex(dc, sc, ch);
 	if( idx < 0 ) 
 	{
-		if( mySc ) ScriptFreeCache(&mySc);
-		return -1;
+		// Get the default character instead
+		TEXTMETRICW tm;
+		GetTextMetricsW(dc, &tm);
+		WORD glyph;
+		if (fGetGlyphIndicesW(dc, &tm.tmDefaultChar, 1, &glyph, 0) != GDI_ERROR)
+			idx = glyph;
+		else
+		{
+			if (mySc) ScriptFreeCache(&mySc);
+			return -1;
+		}
 	}
 
 	HRESULT hr = ScriptGetGlyphABCWidth(dc, sc, idx, abc);
