@@ -20,7 +20,7 @@ The program and any possible upgrades can be found at www.AngelCode.com. The aut
 
 Changes
 -------------------------------
-1.14 beta - 2016/01/02
+1.14 beta - 2016/05/08
 - Fixed crash with large fonts when Windows API incorrectly reported negative width for glyphs.
 - Improved handling of out-of-memory conditions.
 - Fixed crash that could occur when exporting Unicode characters above 0x10000 with kerning pairs.
@@ -38,6 +38,8 @@ Changes
 - Updated libsquish to 1.13.
 - Fixed a problem with exporting glyphs for some international languages.
 - Added support for Unicode 8.0.
+- A 64bit build is now available to support huge bitmap fonts that require more than 2GB of memory to generate.
+- The default glyph for invalid characters is now properly rasterized when not rendered from outline too.
 
 1.13 - 2012/08/12
 - Added option to export fonts using fixed cell heights for easier post processing.

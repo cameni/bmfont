@@ -411,7 +411,7 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 
 int CFontChar::DrawGlyphFromBitmap(HDC dc, int ch, int fontHeight, int fontAscent, const CFontGen *gen)
 {
-	// Get the glyph info
+/*	// Get the glyph info
 	int idx;
 	if( gen->IsUsingUnicode() )
 	{
@@ -430,7 +430,7 @@ int CFontChar::DrawGlyphFromBitmap(HDC dc, int ch, int fontHeight, int fontAscen
 	{
 		idx = ch;
 	}
-
+	*/
 /*
 	Do not use GetGlyphOutline to retrieve the glyph bitmap. 
 	- It doesn't prevent clipping of glyphs that go above or below cell height
@@ -556,7 +556,7 @@ int CFontChar::DrawGlyphFromBitmap(HDC dc, int ch, int fontHeight, int fontAscen
 			}
 		}
 
-		// If the requested font size is too large, the Windows API has a  
+		// If the requested font size is too large, the Windows API has a
 		// bug that causes negative width to be returned in some cases
 		if( m_width < 0 )
 			m_width = 0;
@@ -628,16 +628,24 @@ int CFontChar::DrawGlyphFromBitmap(HDC dc, int ch, int fontHeight, int fontAscen
 			WCHAR buf[2];
 			int length = acUtility::EncodeUTF16(ch, (unsigned char*)buf, 0);
 
-			// Use GetCharacterPlacement/ExtTextOut instead of TextOut to avoid 
+			// GetCharacterPlacement appears to be buggy, and doesn't always 
+			// produce accurate result. Instead we'll find the glyph index on 
+			// our own.
+			WCHAR glyphs[2] = { 0 };
+			int idx = GetUnicodeGlyphIndex(dc, 0, ch);
+			if (idx < 0)
+			{
+				// Get the default character instead
+				TEXTMETRICW tm;
+				GetTextMetricsW(dc, &tm);
+				WORD glyph;
+				if (fGetGlyphIndicesW(dc, &tm.tmDefaultChar, 1, &glyph, 0) != GDI_ERROR)
+					idx = glyph;
+			}
+			glyphs[0] = idx;
+
+			// Use ExtTextOut instead of TextOut to avoid 
 			// internal language specific processing done by TextOut
-			//TextOutW(dc, extraWidth-abc.abcA, 0, buf, length/2);
-			GCP_RESULTSW results;
-			WCHAR glyphs[2] = {0};
-			memset(&results, 0, sizeof(GCP_RESULTSW));
-			results.lStructSize = sizeof(GCP_RESULTSW);
-			results.lpGlyphs = glyphs;
-			results.nGlyphs = 2;
-			GetCharacterPlacementW(dc, buf, length / 2, 0, &results, 0);
 			ExtTextOutW(dc, extraWidth - abc.abcA, 0, ETO_GLYPH_INDEX, NULL, glyphs, 1, NULL);
 
 /*
