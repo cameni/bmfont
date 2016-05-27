@@ -34,6 +34,7 @@ using std::map;
 #include "dynamic_funcs.h"
 #include "ac_string_util.h"
 #include "acutil_unicode.h"
+#include "fontgen.h"
 
 #include "unicode.h"
 
@@ -434,55 +435,55 @@ string GetCharSetName(int charSet)
 	case DEFAULT_CHARSET:
 		str = "DEFAULT";
 		break;
-	case SYMBOL_CHARSET:          
+	case SYMBOL_CHARSET:
 		str = "SYMBOL";
 		break;
-	case SHIFTJIS_CHARSET:        
+	case SHIFTJIS_CHARSET:
 		str = "SHIFTJIS";
 		break;
-	case HANGUL_CHARSET:          
+	case HANGUL_CHARSET:
 		str = "HANGUL";
 		break;
-	case GB2312_CHARSET:          
+	case GB2312_CHARSET:
 		str = "GB2312";
 		break;
-	case CHINESEBIG5_CHARSET:     
+	case CHINESEBIG5_CHARSET:
 		str = "CHINESEBIG5";
 		break;
-	case OEM_CHARSET:             
+	case OEM_CHARSET:
 		str = "OEM";
 		break;
-	case 130: // JOHAB_CHARSET           
+	case 130: // JOHAB_CHARSET
 		str = "JOHAB";
 		break;
-	case 177: // HEBREW_CHARSET          
+	case 177: // HEBREW_CHARSET
 		str = "HEBREW";
 		break;
-	case 178: // ARABIC_CHARSET          
+	case 178: // ARABIC_CHARSET
 		str = "ARABIC";
 		break;
-	case 161: // GREEK_CHARSET           
+	case 161: // GREEK_CHARSET
 		str = "GREEK";
 		break;
-	case 162: // TURKISH_CHARSET         
+	case 162: // TURKISH_CHARSET
 		str = "TURKISH";
 		break;
-	case 163: // VIETNAMESE_CHARSET      
+	case 163: // VIETNAMESE_CHARSET
 		str = "VIETNAMESE";
 		break;
-	case 222: // THAI_CHARSET            
+	case 222: // THAI_CHARSET
 		str = "THAI";
 		break;
-	case 238: // EASTEUROPE_CHARSET      
+	case 238: // EASTEUROPE_CHARSET
 		str = "EASTEUROPE";
 		break;
-	case 204: // RUSSIAN_CHARSET         
+	case 204: // RUSSIAN_CHARSET
 		str = "RUSSIAN";
 		break;
-	case 77:  // MAC_CHARSET             
+	case 77:  // MAC_CHARSET
 		str = "MAC";
 		break;
-	case 186: // BALTIC_CHARSET          
+	case 186: // BALTIC_CHARSET
 		str = "BALTIC";
 		break;
 
@@ -522,6 +523,36 @@ int GetCharSet(const char *charSetName)
 	return set;
 }
 
+int EnumUnicodeGlyphs(HDC dc, map<unsigned int, unsigned int> &unicodeToGlyphMap)
+{
+	unicodeToGlyphMap.clear();
+
+	// This function is only called as fallback in case EnumTrueTypeCMAP didn't
+	// work. so we can assume that the font doesn't have 32bit Unicode support
+	for (unsigned int ch = 0; ch < 0xFFFF; ch++)
+	{
+		// Skip the range for surrogate pairs
+		if (ch == 0xD800)
+		{
+			ch = 0xDFFF;
+			continue;
+		}
+
+		WCHAR buf[] = { WCHAR(ch) };
+		WORD idx; 
+		int r = fGetGlyphIndicesW(dc, buf, 1, &idx, GGI_MARK_NONEXISTING_GLYPHS);
+		if (r != GDI_ERROR && idx != 0xFFFF && idx != 0)
+			unicodeToGlyphMap[ch] = idx;
+	}
+
+	return 0;
+}
+
+/*
+// I've retired this code. Instead the EnumTrueTypeCMAP or EnumUnicodeGlyphs shall be used
+// to map all the existing glyphs in one pass, and then the lookup is done using that map.
+// The ScriptShape wasn't very reliable anyway, and returned a lot of characters as existing
+// even though they didn't.
 int GetUnicodeGlyphIndex(HDC dc, SCRIPT_CACHE *sc, UINT ch)
 {
 	SCRIPT_CACHE mySc = 0;
@@ -570,7 +601,8 @@ int GetUnicodeGlyphIndex(HDC dc, SCRIPT_CACHE *sc, UINT ch)
 	// Was the glyph found?
 	return glyphs[0];
 }
-
+*/
+/*
 int DoesUnicodeCharExist(HDC dc, SCRIPT_CACHE *sc, UINT ch)
 {
 	int idx = GetUnicodeGlyphIndex(dc, sc, ch);
@@ -587,29 +619,14 @@ int DoesUnicodeCharExist(HDC dc, SCRIPT_CACHE *sc, UINT ch)
 
 	return 0;
 }
+*/
 
-int GetUnicodeCharABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT ch, ABC *abc)
+int GetGlyphABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT glyph, ABC *abc)
 {
 	SCRIPT_CACHE mySc = 0;
 	if( sc == 0 ) sc = &mySc;
 
-	int idx = GetUnicodeGlyphIndex(dc, sc, ch);
-	if( idx < 0 ) 
-	{
-		// Get the default character instead
-		TEXTMETRICW tm;
-		GetTextMetricsW(dc, &tm);
-		WORD glyph;
-		if (fGetGlyphIndicesW(dc, &tm.tmDefaultChar, 1, &glyph, 0) != GDI_ERROR)
-			idx = glyph;
-		else
-		{
-			if (mySc) ScriptFreeCache(&mySc);
-			return -1;
-		}
-	}
-
-	HRESULT hr = ScriptGetGlyphABCWidth(dc, sc, idx, abc);
+	HRESULT hr = ScriptGetGlyphABCWidth(dc, sc, glyph, abc);
 	if( FAILED(hr) )
 	{
 		if( mySc ) ScriptFreeCache(&mySc);
@@ -629,8 +646,8 @@ int GetUnicodeCharABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT ch, ABC *abc)
 //
 
 #define TAG(a,b,c,d) ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
-#define SWAP32(x) ((((x)&0xFF)<<24)|(((x)&0xFF00)<<8)|(((x)&0xFF0000)>>8)|(((x)&0xFF000000)>>24))
-#define SWAP16(x) ((((x)&0xFF)<<8)|(((x)&0xFF00)>>8))
+#define SWAP32(x) ((((x)&0xFF)<<24)|(((x)&0xFF00)<<8)|(((x)&0xFF0000)>>8)|((x>>24)&0xFF))
+#define SWAP16(x) ((((x)&0xFF)<<8)|((x>>8)&0xFF))
 
 #define GETUSHORT(x) WORD(SWAP16(*(WORD*)(x)))
 #define GETSHORT(x)  short(SWAP16(*(WORD*)(x)))
@@ -997,7 +1014,7 @@ void ProcessKernFeature(HDC dc, BYTE *featureRecord, BYTE *featureList, BYTE *lo
 	}
 }
 
-void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars)
+void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars, const CFontGen *gen)
 {
 	// Determine the factor for scaling down the values from the design units to the font size
 	float scaleFactor = DetermineDesignUnitToFontUnitFactor(dc);
@@ -1005,16 +1022,13 @@ void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &c
 	// TODO: support non unicode as well
 	// Build a glyphId to char map. Multiple characters may use  
 	// the same glyph, e.g. space, 32, and hard space, 160.
-	SCRIPT_CACHE sc = 0;
 	map<UINT,vector<UINT>> glyphIdToChar;
 	for( UINT n = 0; n < chars.size(); n++ )
 	{
-		int glyphId = GetUnicodeGlyphIndex(dc, &sc, chars[n]);
+		int glyphId = gen->GetUnicodeGlyph(chars[n]);
 		if( glyphId >= 0 )
 			glyphIdToChar[glyphId].push_back(chars[n]);
 	}
-	if( sc )
-		ScriptFreeCache(&sc);
 
 	// Load the GPOS table from the TrueType font file
 	vector<BYTE> buffer;
@@ -1050,7 +1064,7 @@ void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &c
 		{
 			offset = GETUSHORT(scriptRecord+4);
 			break;
-		}				
+		}
 	}
 
 	if( offset == 0 )
@@ -1098,7 +1112,7 @@ void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &c
 //
 
 
-void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars)
+void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars, const CFontGen *gen)
 {
 	// Determine the factor for scaling down the values from the design units to the font size
 	float scaleFactor = DetermineDesignUnitToFontUnitFactor(dc);
@@ -1109,8 +1123,7 @@ void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &c
 	map<UINT,vector<UINT>> glyphIdToChar;
 	for( UINT n = 0; n < chars.size(); n++ )
 	{
-		SCRIPT_CACHE sc;
-		int glyphId = GetUnicodeGlyphIndex(dc, &sc, chars[n]);
+		int glyphId = gen->GetUnicodeGlyph(chars[n]);
 		if( glyphId >= 0 )
 			glyphIdToChar[glyphId].push_back(chars[n]);
 	}
@@ -1186,4 +1199,158 @@ void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &c
 
 		pos += length;
 	}
+}
+
+//=================================================================================
+//
+// ref: http://www.microsoft.com/typography/otspec/otff.htm
+// ref: https://www.microsoft.com/typography/otspec/cmap.htm
+
+int EnumTrueTypeCMAP(HDC dc, map<unsigned int, unsigned int> &unicodeToGlyphMap)
+{
+	// Remove old mappings
+	unicodeToGlyphMap.clear();
+
+	// Load the CMAP table from the TrueType font file
+	vector<BYTE> buffer;
+	DWORD CMAP = TAG('c', 'm', 'a', 'p');
+	DWORD size = GetFontData(dc, CMAP, 0, 0, 0);
+	if (size != GDI_ERROR)
+	{
+		buffer.resize(size);
+		size = GetFontData(dc, CMAP, 0, &buffer[0], size);
+	}
+	if (size == GDI_ERROR || size == 0)
+		return -1;
+
+	// Get the CMAP header info
+	WORD version = GETUSHORT(&buffer[0]);
+	assert(version == 0x0000);
+	WORD nTables = GETUSHORT(&buffer[2]);
+
+	UINT pos = 4;
+	for (unsigned int n = 0; n < nTables; n++)
+	{
+		// Look for the Windows platform CMAP subtable
+		WORD platformID = GETUSHORT(&buffer[pos + 0]);
+		WORD encodingID = GETUSHORT(&buffer[pos + 2]);
+		ULONG offset = GETUINT(&buffer[pos + 4]);
+		pos += 8;
+
+		// platformID 1 is for Mac OS
+		// platformID 3 is for Windows
+		if (platformID == 3)
+		{
+			// For now this code only supports the following encodings:
+			// 1 for Unicode UCS-2 (16bit)
+			// 10 for Unicode UCS-4 (32bit)
+			if (encodingID == 1 || encodingID == 10)
+			{
+				// Jump to the start of the subtable
+				WORD format = GETUSHORT(&buffer[offset]);
+
+				if (format == 0) // byte encoding table
+					assert(false);
+				else if (format == 2) // high-byte mapping through table
+					assert(false);
+				else if (format == 4) // segment mapping to delta values
+				{
+					// This is the standard format used by Microsoft
+					// This format is for example used in the 'Arial' true type font
+
+					// This format supports all Unicode characters below 0xFFFF.
+					// The range U+D800 - U+DFFF is reserved for surrogates and cannot have any characters
+					WORD length = GETUSHORT(&buffer[offset + 2]);
+					WORD language = GETUSHORT(&buffer[offset + 4]);
+					assert(language == 0);
+					WORD segCountX2 = GETUSHORT(&buffer[offset + 6]);
+					WORD searchRange = GETUSHORT(&buffer[offset + 8]);
+					WORD entrySelector = GETUSHORT(&buffer[offset + 10]);
+					WORD rangeShift = GETUSHORT(&buffer[offset + 12]);
+
+					WORD segCount = segCountX2 / 2;
+					WORD *endCount = (WORD*)&buffer[offset + 14];
+					WORD *startCount = (WORD*)&buffer[offset + 16 + segCountX2];
+					SHORT *idDelta = (SHORT*)&buffer[offset + 16 + segCountX2 * 2];
+					WORD *idRangeOffset = (WORD*)&buffer[offset + 16 + segCountX2 * 3];
+					// glyphIdArray is used indirectly so we don't need to take its address
+					//WORD *glyphIdArray = (WORD*)&buffer[offset + 16 + segCountX2 * 4];
+					
+					// Iterate over each segment to identify the characters to glyph id mappings
+					for (unsigned int s = 0; s < segCount; s++)
+					{
+						WORD start = SWAP16(startCount[s]);
+						WORD end = SWAP16(endCount[s]);
+
+						if (start == 0xFFFF && end == 0xFFFF)
+						{
+							// We've reached the end
+							assert(s == segCount - 1);
+							break;
+						}
+
+						WORD rangeOffset = SWAP16(idRangeOffset[s]);
+						SHORT delta = SWAP16(idDelta[s]);
+						for (unsigned int ch = start; ch <= end; ch++)
+						{
+							WORD glyphId = 0;
+							if (idRangeOffset[s] != 0)
+							{
+								glyphId = SWAP16(*(&idRangeOffset[s] + rangeOffset / 2 + (ch - start)));
+								if (glyphId != 0)
+									glyphId += delta;
+							}
+							else
+							{
+								glyphId = ch + delta;
+							}
+							if (glyphId != 0)
+								unicodeToGlyphMap[ch] = glyphId;
+						}
+					}
+				}
+				else if (format == 6) // trimmed table mapping
+					assert(false);
+				else if (format == 8) // mixed 16-bit and 32-bit coverage
+					assert(false);
+				else if (format == 10) // trimmed array
+					assert(false);
+				else if (format == 12) // segmented coverage
+				{
+					// This is the standard format used by Microsoft
+					// This format is for example used in the 'Cambria Math' and 'DejaVu Sans' true type fonts
+
+					ULONG length = GETUINT(&buffer[offset + 4]);
+					ULONG language = GETUINT(&buffer[offset + 8]);
+					assert(language == 0);
+					ULONG nGroups = GETUINT(&buffer[offset + 12]);
+					
+					// Iterate over each group to identify the characters to glyph id mappings
+					offset += 16;
+					for (unsigned int s = 0; s < nGroups; s++)
+					{
+						ULONG start = GETUINT(&buffer[offset + 0]);
+						ULONG end = GETUINT(&buffer[offset + 4]);
+						ULONG startGlyphId = GETUINT(&buffer[offset + 8]);
+
+						for (unsigned int ch = start; ch <= end; ch++)
+						{
+							ULONG glyphId = ch - start + startGlyphId;
+							unicodeToGlyphMap[ch] = glyphId;
+						}
+
+						offset += 12;
+					}
+				}
+				else if (format == 13) // many-to-one range mappings
+					assert(false);
+				else if (format == 14) // unicode variation sequences
+					assert(false);
+				else
+					assert(false);
+			}
+		}
+	}
+
+	return 0;
 }

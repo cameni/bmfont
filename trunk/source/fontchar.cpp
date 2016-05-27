@@ -125,22 +125,9 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	// Get the glyph info
 	int idx;
 	if( gen->IsUsingUnicode() )
-	{
-		idx = GetUnicodeGlyphIndex(dc, 0, ch);
-		if( idx < 0 )
-		{
-			// Get the default character instead
-			TEXTMETRICW tm;
-			GetTextMetricsW(dc, &tm);
-			WORD glyph;
-			fGetGlyphIndicesW(dc, &tm.tmDefaultChar, 1, &glyph, 0);
-			idx = glyph;
-		}
-	}
+		idx = gen->GetUnicodeGlyph(ch);
 	else
-	{
 		idx = ch;
-	}
 
 	GLYPHMETRICS gm;
 
@@ -535,7 +522,7 @@ int CFontChar::DrawGlyphFromBitmap(HDC dc, int ch, int fontHeight, int fontAscen
 		ABC abc;
 		if( gen->IsUsingUnicode() )
 		{
-			if( GetUnicodeCharABCWidths(dc, 0, ch, &abc) < 0 )
+			if( GetGlyphABCWidths(dc, 0, gen->GetUnicodeGlyph(ch), &abc) < 0 )
 				memset(&abc, 0, sizeof(abc));
 
 			m_width = int(abc.abcB);
@@ -632,17 +619,7 @@ int CFontChar::DrawGlyphFromBitmap(HDC dc, int ch, int fontHeight, int fontAscen
 			// produce accurate result. Instead we'll find the glyph index on 
 			// our own.
 			WCHAR glyphs[2] = { 0 };
-			int idx = GetUnicodeGlyphIndex(dc, 0, ch);
-			if (idx < 0)
-			{
-				// Get the default character instead
-				TEXTMETRICW tm;
-				GetTextMetricsW(dc, &tm);
-				WORD glyph;
-				if (fGetGlyphIndicesW(dc, &tm.tmDefaultChar, 1, &glyph, 0) != GDI_ERROR)
-					idx = glyph;
-			}
-			glyphs[0] = idx;
+			glyphs[0] = gen->GetUnicodeGlyph(ch);
 
 			// Use ExtTextOut instead of TextOut to avoid 
 			// internal language specific processing done by TextOut

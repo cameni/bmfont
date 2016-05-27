@@ -110,7 +110,7 @@
       <AdditionalDependencies>Usp10.lib;comctl32.lib;libpng16.lib;zlibstat.lib;jpeg.lib;libsquish.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\Debug/bmfont.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>libs\libpng;libs\zlib;libs\libjpeg;libs\squish;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>libs\libpng;libs\zlib\debug;libs\libjpeg;libs\squish\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/bmfont.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
