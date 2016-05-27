@@ -244,8 +244,8 @@ int CCharWin::Create(int width, int height, const string &configFile)
 
 	statusBar = new CStatusBar();
 	statusBar->Create(this);
-	int widths[] = {-1, 200, 120};
-	statusBar->SetParts(3, widths);
+	int widths[] = {-1, 200, 120, 120};
+	statusBar->SetParts(4, widths);
 
 	LoadConfig(configFile);
 
@@ -415,14 +415,6 @@ void CCharWin::DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm)
 			
 			if( idx <= subset->charEnd )
 			{
-				int cy = (rc.bottom/16 - tm.tmHeight)/2 + 1;
-
-				// Determine X position
-				ABC abc;
-				int cx = rc.right/16/2;
-				if( GetUnicodeCharABCWidths(dc, &sc, idx, &abc) >= 0 )
-					cx -= abc.abcB/2 + abc.abcA;
-
 				if( fontGen->IsSelected(idx) )
 					SetTextColor(dc, RGB(0,0,0));
 				else
@@ -457,20 +449,20 @@ void CCharWin::DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm)
 
 				if( !fontGen->IsDisabled(idx) )
 				{
+					int cy = (rc.bottom / 16 - tm.tmHeight) / 2 + 1;
+
+					int glyph = fontGen->GetUnicodeGlyph(idx);
+
+					// Determine X position
+					ABC abc;
+					int cx = rc.right / 16 / 2;
+					if (GetGlyphABCWidths(dc, &sc, glyph, &abc) >= 0)
+						cx -= abc.abcB / 2 + abc.abcA;
+
 					// Use ExtTextOut instead of TextOut to avoid 
 					// internal language specific processing done by TextOut
 					//TextOutW(dc, x*rc.right/16 + cx, y*rc.bottom/16+cy, ch, length/2);
 					WCHAR glyphs[2] = {0};
-					int glyph = GetUnicodeGlyphIndex(dc, 0, idx);
-					if (glyph < 0)
-					{
-						// Get the default character instead
-						TEXTMETRICW tm;
-						GetTextMetricsW(dc, &tm);
-						WORD glyphDefault;
-						if (fGetGlyphIndicesW(dc, &tm.tmDefaultChar, 1, &glyphDefault, 0) != GDI_ERROR)
-							glyph = glyphDefault;
-					}
 					glyphs[0] = glyph;
 					ExtTextOutW(dc, x*rc.right / 16 + cx, y*rc.bottom / 16 + cy, ETO_GLYPH_INDEX, NULL, glyphs, 1, NULL);
 				}
@@ -519,10 +511,10 @@ void CCharWin::DrawAnsi(HDC dc, RECT &rc, TEXTMETRIC &tm)
 			int cy = (rc.bottom/16 - tm.tmHeight)/2 + 1;
 
 			int cx;
-			if( !GetCharWidth32(dc, idx, idx, &cx) )
+			if( !GetCharWidth32A(dc, idx, idx, &cx) )
 			{
 				ABC abc;
-				if( !GetCharABCWidths(dc, idx, idx, &abc) )
+				if( !GetCharABCWidthsA(dc, idx, idx, &abc) )
 					cx = 0;
 				else
 					cx = abc.abcB;
@@ -702,11 +694,57 @@ LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 		// Determine which character the mouse is over
 		if( ch >= 0 )
 		{
-			string str = acStringFormat("%d : %X", ch, ch);
+			int uni;
+			int glyph;
+			if (fontGen->IsUsingUnicode())
+			{
+				uni = ch;
+
+				// Determine the glyph id for the character
+				glyph = fontGen->GetUnicodeGlyph(uni);
+			}
+			else
+			{
+				// TODO: Translate from charset to unicode
+				uni = ch;
+
+				// Translate the char to glyph id
+				char str[2] = { (char)ch, '\0' };
+				WCHAR glyphs[2];
+				HDC dc = GetDC(0);
+				HFONT font = fontGen->CreateFont(16);
+				HFONT oldFont = (HFONT)SelectObject(dc, font);
+				GCP_RESULTSA result;
+				result.lStructSize = sizeof(GCP_RESULTS);
+				result.lpOutString = 0;
+				result.lpOrder = 0;
+				result.lpDx = 0;
+				result.lpCaretPos = 0;
+				result.lpClass = 0;
+				result.lpGlyphs = glyphs;
+				result.nGlyphs = 2;
+				result.nMaxFit = 0;
+				GetCharacterPlacementA(dc, str, 1, 0, &result, 0);
+				SelectObject(dc, oldFont);
+				DeleteObject(font);
+
+				glyph = result.nGlyphs ? result.lpGlyphs[0] : -1;
+			}
+
+			string str = acStringFormat("%d : %X", ch, uni);
 			statusBar->SetStatusText(str.c_str(), 2, 0);
+
+			if (glyph >= 0)
+				str = acStringFormat("glyph %d", glyph);
+			else
+				str = "";
+			statusBar->SetStatusText(str.c_str(), 3, 0);
 		}
 		else
+		{
 			statusBar->SetStatusText("", 2, 0);
+			statusBar->SetStatusText("", 3, 0);
+		}
 		return 0;
 
 	case WM_SIZE:

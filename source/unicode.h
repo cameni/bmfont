@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2014 Andreas Jonsson
+   Copyright (c) 2004-2016 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -30,9 +30,11 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <Usp10.h>
 using std::string;
 using std::vector;
+class CFontGen;
 
 // Interesting links
 //
@@ -58,11 +60,11 @@ string GetCharSetName(int charSet);
 int GetCharSet(const char *charSetName);
 int GetSubsetFromChar(unsigned int chr);
 
-int DoesUnicodeCharExist(HDC dc, SCRIPT_CACHE *sc, UINT ch);
-int GetUnicodeCharABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT ch, ABC *abc);
-int GetUnicodeGlyphIndex(HDC dc, SCRIPT_CACHE *sc, UINT ch);
+int GetGlyphABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT glyph, ABC *abc);
 
-void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars);
-void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars);
+void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars, const CFontGen *gen);
+void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars, const CFontGen *gen);
+int EnumTrueTypeCMAP(HDC dc, std::map<unsigned int, unsigned int> &unicodeToGlyph);
+int EnumUnicodeGlyphs(HDC dc, std::map<unsigned int, unsigned int> &unicodeToGlyph);
 
 #endif

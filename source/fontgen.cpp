@@ -1062,6 +1062,12 @@ void CFontGen::DetermineExistingChars()
 	HFONT font = CreateFont(10);
 	HFONT oldFont = (HFONT)SelectObject(dc, font);
 
+	// TODO: This is taking too long. If it is not possible to optimize significantly, then it is necessary
+	//       to add a status bar for the user to see the progress while scanning the font for glyphs
+	EnumTrueTypeCMAP(dc, unicodeToGlyph);
+	if (unicodeToGlyph.empty())
+		EnumUnicodeGlyphs(dc, unicodeToGlyph);
+
 	if( fGetGlyphIndicesA )
 	{
 		numCharsAvailable = 0;
@@ -1073,8 +1079,8 @@ void CFontGen::DetermineExistingChars()
 			memset(disabled, 1, (maxUnicodeChar+1)*sizeof(bool));
 
 			// GetGlyphIndices doesn't support surrogate pairs
-			// neither does ScriptGetCMap, so we'll have to go the 
-			// long route and use ScriptItemize and ScriptShape	
+			// neither does ScriptGetCMap, so we'll have to go the
+			// long route and use ScriptItemize and ScriptShape
 			SCRIPT_CACHE sc = 0;
 
 			for( int subset = 0; subset < numUnicodeSubsets; subset++ )
@@ -1100,7 +1106,7 @@ void CFontGen::DetermineExistingChars()
 					// Determine the available characters in this set
 					for( unsigned int n = begin; n <= end; n++ )
 					{
-						bool exists = DoesUnicodeCharExist(dc, &sc, n) > 0;
+						bool exists = DoesUnicodeCharExist(n);
 
 						if( !disableBoxChars || exists )
 						{
@@ -1162,6 +1168,24 @@ void CFontGen::DetermineExistingChars()
 	DeleteObject(font);
 
 	ReleaseDC(0, dc);
+}
+
+bool CFontGen::DoesUnicodeCharExist(unsigned int ch) const
+{
+	if (unicodeToGlyph.find(ch) != unicodeToGlyph.end())
+		return true;
+
+	return false;
+}
+
+// Returns 0 (the default glyph) if the character isn't found
+int CFontGen::GetUnicodeGlyph(unsigned int ch) const
+{
+	auto it = unicodeToGlyph.find(ch);
+	if (it == unicodeToGlyph.end())
+		return 0;
+
+	return it->second;
 }
 
 // Internal
@@ -1887,7 +1911,7 @@ int CFontGen::SaveFont(const char *szFile)
 				}
 			}
 
-			GetKerningPairsFromKERN(dc, pairs, chars);
+			GetKerningPairsFromKERN(dc, pairs, chars, this);
 		}
 	*/
 		if( pairs.size() == 0 )
@@ -1905,7 +1929,7 @@ int CFontGen::SaveFont(const char *szFile)
 				}
 			}
 
-			GetKerningPairsFromGPOS(dc, pairs, chars);
+			GetKerningPairsFromGPOS(dc, pairs, chars, this);
 		}
 
 		if( pairs.size() > 0 )
@@ -2460,6 +2484,8 @@ int CFontGen::SelectCharsFromFile(const char *filename)
 		else
 		{
 			// TODO: Ask the user
+			// TODO: Use IsTextUnicode from Windows API
+			//       ref: https://msdn.microsoft.com/en-us/library/windows/desktop/dd318672(v=vs.85).aspx
 			// No byte order mark was found, let's read as utf-16 little endian
 			utf16_littleEndian = true;
 		}

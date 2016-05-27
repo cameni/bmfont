@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2014 Andreas Jonsson
+   Copyright (c) 2004-2016 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -34,6 +34,8 @@
 using std::string;
 #include <vector>
 using std::vector;
+#include <map>
+using std::map;
 
 #include "fontpage.h"
 
@@ -114,6 +116,8 @@ public:
 	int     GetNumCharsSelected();
 	int     GetNumCharsAvailable();
 	int     SelectCharsFromFile(const char *filename);
+	bool    DoesUnicodeCharExist(unsigned int ch) const;
+	int     GetUnicodeGlyph(unsigned int ch) const;
 
 	// Failed characters
 	int     GetNumFailedChars();
@@ -146,7 +150,7 @@ public:
 	bool    GetFixedHeight() const;        int SetFixedHeight(bool fixed);
 	bool    GetForceZero() const;          int SetForceZero(bool force);
 									
-	// Output font file				
+	// Output font file
 	int     GetOutWidth() const;           int SetOutWidth(int width);
 	int     GetOutHeight() const;          int SetOutHeight(int height);
 	int     GetOutBitDepth() const;        int SetOutBitDepth(int bitDepth);
@@ -271,6 +275,9 @@ protected:
 	// Available character subsets
 	vector<SSubset *> subsets;
 	unsigned int lastFoundSubset;
+
+	// Character to glyph mapping
+	map<unsigned int, unsigned int> unicodeToGlyph;
 
 	// Font config
 	string fontConfigFile;
