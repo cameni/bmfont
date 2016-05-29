@@ -118,6 +118,7 @@ public:
 	int     SelectCharsFromFile(const char *filename);
 	bool    DoesUnicodeCharExist(unsigned int ch) const;
 	int     GetUnicodeGlyph(unsigned int ch) const;
+	int     GetNonUnicodeGlyph(unsigned int ch) const;
 
 	// Failed characters
 	int     GetNumFailedChars();
@@ -174,7 +175,7 @@ public:
 	int     Prepare();
 
 	// A helper function for creating the font object
-	HFONT   CreateFont(int fontSize);
+	HFONT   CreateFont(int fontSize) const;
 
 	// Visualize pages
 	int     GetNumPages();

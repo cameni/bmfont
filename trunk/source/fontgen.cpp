@@ -461,7 +461,7 @@ bool CFontGen::IsBlueInverted() const
 	return invB;
 }
 
-HFONT CFontGen::CreateFont(int FontSize)
+HFONT CFontGen::CreateFont(int FontSize) const
 {
 	if( FontSize == 0 ) FontSize = fontSize*aa;
 	DWORD quality = useSmoothing ? ANTIALIASED_QUALITY : NONANTIALIASED_QUALITY;
@@ -1186,6 +1186,29 @@ int CFontGen::GetUnicodeGlyph(unsigned int ch) const
 		return 0;
 
 	return it->second;
+}
+
+// Returns 0 (the default glyph) if the character isn't found
+int CFontGen::GetNonUnicodeGlyph(unsigned int ch) const
+{
+	// TODO: This needs to be cached, so the font isn't created with every lookup
+
+	// Translate the char to glyph id
+	char str[2] = { (char)ch, '\0' };
+	WCHAR glyphs[2];
+	HDC dc = GetDC(0);
+	HFONT font = CreateFont(16);
+	HFONT oldFont = (HFONT)SelectObject(dc, font);
+	GCP_RESULTSA result;
+	memset(&result, 0, sizeof(GCP_RESULTSA));
+	result.lStructSize = sizeof(GCP_RESULTSA);
+	result.lpGlyphs = glyphs;
+	result.nGlyphs = 2;
+	GetCharacterPlacementA(dc, str, 1, 0, &result, 0);
+	SelectObject(dc, oldFont);
+	DeleteObject(font);
+
+	return result.nGlyphs ? result.lpGlyphs[0] : 0;
 }
 
 // Internal

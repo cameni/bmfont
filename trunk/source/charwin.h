@@ -72,8 +72,7 @@ protected:
 	void LoadConfig(const string &configFile);
 	void PrepareView();
 
-	void DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm);
-	void DrawAnsi(HDC dc, RECT &rc, TEXTMETRIC &tm);
+	void DrawGlyphs(HDC dc, RECT &rc, TEXTMETRIC &tm);
 
 	void UpdateStatus();
 	void UpdateSubsetsSelection();
