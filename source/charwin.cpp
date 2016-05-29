@@ -385,10 +385,7 @@ void CCharWin::Draw()
 	HPEN red = CreatePen(PS_SOLID, 3, RGB(255, 0, 0));
 	SelectObject(dc, red);
 
-	if( fontGen->IsUsingUnicode() )
-		DrawUnicode(dc, rc, tm);
-	else
-		DrawAnsi(dc, rc, tm);
+	DrawGlyphs(dc, rc, tm);
 
 	SelectObject(dc, oldFont);
 	DeleteObject(font);
@@ -400,37 +397,42 @@ void CCharWin::Draw()
 	EndPaint(hWnd, &ps);
 }
 
-void CCharWin::DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm)
+void CCharWin::DrawGlyphs(HDC dc, RECT &rc, TEXTMETRIC &tm)
 {
-	const SSubset *subset = fontGen->GetUnicodeSubset(unicodeSubset);
-	int offset = subset->charBegin;
+	int offset = 0, charEnd = 255;
+	if (fontGen->IsUsingUnicode())
+	{
+		const SSubset *subset = fontGen->GetUnicodeSubset(unicodeSubset);
+		offset = subset->charBegin;
+		charEnd = subset->charEnd;
+	}
 
 	SCRIPT_CACHE sc = 0;
 
-	for( int y = 0; y < 16; y++ )
+	for (int y = 0; y < 16; y++)
 	{
-		for( int x = 0; x < 16; x++ )
+		for (int x = 0; x < 16; x++)
 		{
-			int idx = y*16+x + offset;
-			
-			if( idx <= subset->charEnd )
-			{
-				if( fontGen->IsSelected(idx) )
-					SetTextColor(dc, RGB(0,0,0));
-				else
-					SetTextColor(dc, RGB(64,64,64));
+			int idx = y * 16 + x + offset;
 
-				if( fontGen->IsDisabled(idx) || 
-					!fontGen->IsSelected(idx) )
+			if (idx <= charEnd)
+			{
+				if (fontGen->IsSelected(idx))
+					SetTextColor(dc, RGB(0, 0, 0));
+				else
+					SetTextColor(dc, RGB(64, 64, 64));
+
+				if (fontGen->IsDisabled(idx) ||
+					!fontGen->IsSelected(idx))
 				{
 					RECT box;
-					box.left = x*rc.right/16 + 1;
-					box.right = (x+1)*rc.right/16;
-					box.top = y*rc.bottom/16 + 1;
-					box.bottom = (y+1)*rc.bottom/16;
-					if( fontGen->IsDisabled(idx) )
+					box.left = x*rc.right / 16 + 1;
+					box.right = (x + 1)*rc.right / 16;
+					box.top = y*rc.bottom / 16 + 1;
+					box.bottom = (y + 1)*rc.bottom / 16;
+					if (fontGen->IsDisabled(idx))
 					{
-						HBRUSH br = CreateHatchBrush(HS_DIAGCROSS, RGB(128,128,128));
+						HBRUSH br = CreateHatchBrush(HS_DIAGCROSS, RGB(128, 128, 128));
 						FillRect(dc, &box, br);
 						DeleteObject(br);
 					}
@@ -438,20 +440,24 @@ void CCharWin::DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm)
 						FillRect(dc, &box, (HBRUSH)GetStockObject(GRAY_BRUSH));
 				}
 
-				if( fontGen->DidNotFit(idx) )
+				if (fontGen->DidNotFit(idx))
 				{
-					MoveToEx(dc, x*rc.right/16 + 1, y*rc.bottom/16 + 1, 0);
-					LineTo(dc, (x+1)*rc.right/16 - 1, y*rc.bottom/16 + 1);
-					LineTo(dc, (x+1)*rc.right/16 - 1, (y+1)*rc.bottom/16 - 1);
-					LineTo(dc, x*rc.right/16 + 1, (y+1)*rc.bottom/16 - 1);
-					LineTo(dc, x*rc.right/16 + 1, y*rc.bottom/16 + 1);
+					MoveToEx(dc, x*rc.right / 16 + 1, y*rc.bottom / 16 + 1, 0);
+					LineTo(dc, (x + 1)*rc.right / 16 - 1, y*rc.bottom / 16 + 1);
+					LineTo(dc, (x + 1)*rc.right / 16 - 1, (y + 1)*rc.bottom / 16 - 1);
+					LineTo(dc, x*rc.right / 16 + 1, (y + 1)*rc.bottom / 16 - 1);
+					LineTo(dc, x*rc.right / 16 + 1, y*rc.bottom / 16 + 1);
 				}
 
-				if( !fontGen->IsDisabled(idx) )
+				if (!fontGen->IsDisabled(idx))
 				{
 					int cy = (rc.bottom / 16 - tm.tmHeight) / 2 + 1;
 
-					int glyph = fontGen->GetUnicodeGlyph(idx);
+					int glyph;
+					if (fontGen->IsUsingUnicode())
+						glyph = fontGen->GetUnicodeGlyph(idx);
+					else
+						glyph = fontGen->GetNonUnicodeGlyph(idx);
 
 					// Determine X position
 					ABC abc;
@@ -462,19 +468,19 @@ void CCharWin::DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm)
 					// Use ExtTextOut instead of TextOut to avoid 
 					// internal language specific processing done by TextOut
 					//TextOutW(dc, x*rc.right/16 + cx, y*rc.bottom/16+cy, ch, length/2);
-					WCHAR glyphs[2] = {0};
+					WCHAR glyphs[2] = { 0 };
 					glyphs[0] = glyph;
 					ExtTextOutW(dc, x*rc.right / 16 + cx, y*rc.bottom / 16 + cy, ETO_GLYPH_INDEX, NULL, glyphs, 1, NULL);
 				}
 
-				if( fontGen->IsImage(idx) )
+				if (fontGen->IsImage(idx))
 				{
 					RECT box;
-					box.left = (x+1)*rc.right/16 - 5;
-					box.right = (x+1)*rc.right/16;
-					box.top = (y+1)*rc.bottom/16 - 5;
-					box.bottom = (y+1)*rc.bottom/16;
-					HBRUSH br = CreateSolidBrush(RGB(128,255,255));
+					box.left = (x + 1)*rc.right / 16 - 5;
+					box.right = (x + 1)*rc.right / 16;
+					box.top = (y + 1)*rc.bottom / 16 - 5;
+					box.bottom = (y + 1)*rc.bottom / 16;
+					HBRUSH br = CreateSolidBrush(RGB(128, 255, 255));
 					FillRect(dc, &box, br);
 					DeleteObject(br);
 				}
@@ -482,93 +488,18 @@ void CCharWin::DrawUnicode(HDC dc, RECT &rc, TEXTMETRIC &tm)
 			else
 			{
 				RECT box;
-				box.left = x*rc.right/16 + 1;
-				box.right = (x+1)*rc.right/16;
-				box.top = y*rc.bottom/16 + 1;
-				box.bottom = (y+1)*rc.bottom/16;
+				box.left = x*rc.right / 16 + 1;
+				box.right = (x + 1)*rc.right / 16;
+				box.top = y*rc.bottom / 16 + 1;
+				box.bottom = (y + 1)*rc.bottom / 16;
 				FillRect(dc, &box, (HBRUSH)GetStockObject(DKGRAY_BRUSH));
 			}
 		}
 	}
 
 	// Clean up the cache created by Uniscribe
-	if( sc != 0 )
+	if (sc != 0)
 		ScriptFreeCache(&sc);
-}
-
-void CCharWin::DrawAnsi(HDC dc, RECT &rc, TEXTMETRIC &tm)
-{
-	for( int y = 0; y < 16; y++ )
-	{
-		for( int x = 0; x < 16; x++ )
-		{
-			int idx = y*16 + x;
-
-			char ch[2];
-			ch[0] = idx;
-			ch[1] = '\0';
-			
-			int cy = (rc.bottom/16 - tm.tmHeight)/2 + 1;
-
-			int cx;
-			if( !GetCharWidth32A(dc, idx, idx, &cx) )
-			{
-				ABC abc;
-				if( !GetCharABCWidthsA(dc, idx, idx, &abc) )
-					cx = 0;
-				else
-					cx = abc.abcB;
-			}
-
-			cx = (rc.right/16 - cx)/2;
-
-			if( fontGen->IsSelected(y*16 + x) )
-				SetTextColor(dc, RGB(0,0,0));
-			else
-				SetTextColor(dc, RGB(64,64,64));
-
-			if( fontGen->IsDisabled(y*16+x) || !fontGen->IsSelected(y*16+x) )
-			{
-				RECT box;
-				box.left = x*rc.right/16 + 1;
-				box.right = (x+1)*rc.right/16;
-				box.top = y*rc.bottom/16 + 1;
-				box.bottom = (y+1)*rc.bottom/16;
-				if( fontGen->IsDisabled(y*16+x) )
-				{
-					HBRUSH br = CreateHatchBrush(HS_DIAGCROSS, RGB(128,128,128));
-					FillRect(dc, &box, br);
-					DeleteObject(br);
-				}
-				else
-					FillRect(dc, &box, (HBRUSH)GetStockObject(GRAY_BRUSH));
-			}
-
-			if( fontGen->DidNotFit(y*16 + x) )
-			{
-				MoveToEx(dc, x*rc.right/16 + 1, y*rc.bottom/16 + 1, 0);
-				LineTo(dc, (x+1)*rc.right/16 - 1, y*rc.bottom/16 + 1);
-				LineTo(dc, (x+1)*rc.right/16 - 1, (y+1)*rc.bottom/16 - 1);
-				LineTo(dc, x*rc.right/16 + 1, (y+1)*rc.bottom/16 - 1);
-				LineTo(dc, x*rc.right/16 + 1, y*rc.bottom/16 + 1);
-			}
-
-			if( !fontGen->IsDisabled(y*16+x) )
-				TextOutA(dc, x*rc.right/16 + cx, y*rc.bottom/16+cy, ch, 1);
-
-			if( fontGen->IsImage(idx) )
-			{
-				RECT box;
-				box.left = (x+1)*rc.right/16 - 5;
-				box.right = (x+1)*rc.right/16;
-				box.top = (y+1)*rc.bottom/16 - 5;
-				box.bottom = (y+1)*rc.bottom/16;
-				HBRUSH br = CreateSolidBrush(RGB(128,255,255));
-				FillRect(dc, &box, br);
-				DeleteObject(br);
-			}
-		}
-	}
 }
 
 void CCharWin::OnInitMenuPopup(HMENU menu, int pos, BOOL isWindowMenu)
@@ -709,26 +640,7 @@ LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				uni = ch;
 
 				// Translate the char to glyph id
-				char str[2] = { (char)ch, '\0' };
-				WCHAR glyphs[2];
-				HDC dc = GetDC(0);
-				HFONT font = fontGen->CreateFont(16);
-				HFONT oldFont = (HFONT)SelectObject(dc, font);
-				GCP_RESULTSA result;
-				result.lStructSize = sizeof(GCP_RESULTS);
-				result.lpOutString = 0;
-				result.lpOrder = 0;
-				result.lpDx = 0;
-				result.lpCaretPos = 0;
-				result.lpClass = 0;
-				result.lpGlyphs = glyphs;
-				result.nGlyphs = 2;
-				result.nMaxFit = 0;
-				GetCharacterPlacementA(dc, str, 1, 0, &result, 0);
-				SelectObject(dc, oldFont);
-				DeleteObject(font);
-
-				glyph = result.nGlyphs ? result.lpGlyphs[0] : -1;
+				glyph = fontGen->GetNonUnicodeGlyph(ch);
 			}
 
 			string str = acStringFormat("%d : %X", ch, uni);
