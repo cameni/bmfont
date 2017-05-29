@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -644,15 +644,6 @@ int GetGlyphABCWidths(HDC dc, SCRIPT_CACHE *sc, UINT glyph, ABC *abc)
 //            http://www.microsoft.com/typography/otspec/otff.htm
 //            http://partners.adobe.com/public/developer/opentype/index_table_formats2.html
 //
-
-#define TAG(a,b,c,d) ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
-#define SWAP32(x) ((((x)&0xFF)<<24)|(((x)&0xFF00)<<8)|(((x)&0xFF0000)>>8)|((x>>24)&0xFF))
-#define SWAP16(x) ((((x)&0xFF)<<8)|((x>>8)&0xFF))
-
-#define GETUSHORT(x) WORD(SWAP16(*(WORD*)(x)))
-#define GETSHORT(x)  short(SWAP16(*(WORD*)(x)))
-#define GETUINT(x)   DWORD(SWAP32(*(DWORD*)(x)))
-#define GETINT(x)    int(SWAP32(*(DWORD*)(x)))
 
 UINT GetClassFromClassDef(BYTE *classDef, WORD glyphId)
 {

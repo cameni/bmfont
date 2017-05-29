@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -40,6 +40,7 @@ using std::vector;
 #include "fontgen.h"
 
 class CImageMgr;
+class CInspectFont;
 
 class CCharWin : public acWindow::CWindow
 {
@@ -55,6 +56,7 @@ public:
 
 protected:
 	friend class CImageMgr;
+	friend class CInspectFont;
 
 	void OnChooseFont();
 	void OnExportOptions();
@@ -88,6 +90,7 @@ protected:
 	acWindow::CListView  *listView;
 	acWindow::CStatusBar *statusBar;
 	CImageMgr            *imageMgr;
+	CInspectFont         *inspectFont;
 
 	bool isDragging;
 	bool isPreparing;

@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -66,5 +66,14 @@ void GetKerningPairsFromGPOS(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &c
 void GetKerningPairsFromKERN(HDC dc, vector<KERNINGPAIR> &pairs, vector<UINT> &chars, const CFontGen *gen);
 int EnumTrueTypeCMAP(HDC dc, std::map<unsigned int, unsigned int> &unicodeToGlyph);
 int EnumUnicodeGlyphs(HDC dc, std::map<unsigned int, unsigned int> &unicodeToGlyph);
+
+#define TAG(a,b,c,d) ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
+#define SWAP32(x) ((((x)&0xFF)<<24)|(((x)&0xFF00)<<8)|(((x)&0xFF0000)>>8)|((x>>24)&0xFF))
+#define SWAP16(x) ((((x)&0xFF)<<8)|((x>>8)&0xFF))
+
+#define GETUSHORT(x) WORD(SWAP16(*(WORD*)(x)))
+#define GETSHORT(x)  short(SWAP16(*(WORD*)(x)))
+#define GETUINT(x)   DWORD(SWAP32(*(DWORD*)(x)))
+#define GETINT(x)    int(SWAP32(*(DWORD*)(x)))
 
 #endif

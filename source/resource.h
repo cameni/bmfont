@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2014 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -40,6 +40,7 @@
 #define IDD_ICONIMAGE                           113
 #define IDR_IMG_MGR_MENU                        114
 #define IDD_EXPORT                              115
+#define IDR_INSPECT_FONT_MENU                   116
 #define IDC_FONT                                1001
 #define IDC_FORCEZERO                           1001
 #define IDC_XOFFSET                             1001
@@ -122,6 +123,11 @@
 #define ID_IMAGE_EDIT                           40033
 #define ID_EDIT_CLEARALL                        40034
 #define ID_OPTIONS_EXPORTOPTIONS                40035
+#define ID_OPTIONS_INSPECTFONT                  40036
+#define ID_VIEW_BASIC                           40037
+#define ID_VIEW_KERN                            40038
+#define ID_VIEW_GPOS                            40039
+#define ID_VIEW_GSUB                            40040
 #define ID_APP_EXIT                             57665
 #define IDC_INV_A                               57666
 #define IDC_INV_G                               57670

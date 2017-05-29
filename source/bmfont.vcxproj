@@ -343,6 +343,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="inspectfont.cpp" />
     <ClCompile Include="main.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
@@ -382,6 +383,7 @@
     <ClInclude Include="fontpage.h" />
     <ClInclude Include="iconimagedlg.h" />
     <ClInclude Include="imagewnd.h" />
+    <ClInclude Include="inspectfont.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="unicode.h" />
   </ItemGroup>

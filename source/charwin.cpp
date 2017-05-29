@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -42,6 +42,7 @@
 #include "ac_string_util.h"
 #include "acwin_filedialog.h"
 #include "imagemgr.h"
+#include "inspectfont.h"
 #include "acutil_unicode.h"
 #include "acutil_path.h"
 #include "unicode.h"
@@ -56,10 +57,11 @@ CCharWin::CCharWin() : CWindow()
 {
 	fontGen       = 0;
 
-	wnd       = 0;
-	listView  = 0;
-	statusBar = 0;
-	imageMgr  = 0;
+	wnd         = 0;
+	listView    = 0;
+	statusBar   = 0;
+	imageMgr    = 0;
+	inspectFont = 0;
 
 	isGenerating           = false;
 	whenGenerateIsFinished = 0;
@@ -75,6 +77,12 @@ CCharWin::~CCharWin()
 	{
 		delete imageMgr;
 		imageMgr = 0;
+	}
+
+	if (inspectFont)
+	{
+		delete inspectFont;
+		inspectFont = 0;
 	}
 
 	if( wnd )
@@ -550,13 +558,14 @@ void CCharWin::OnInitMenuPopup(HMENU menu, int pos, BOOL isWindowMenu)
 	}
 
 	if( imageMgr )
-	{
 		CheckMenuItem(menu, ID_EDIT_OPENIMAGEMANAGER, MF_BYCOMMAND | MF_CHECKED);
-	}
 	else
-	{
 		CheckMenuItem(menu, ID_EDIT_OPENIMAGEMANAGER, MF_BYCOMMAND | MF_UNCHECKED);
-	}
+
+	if (inspectFont)
+		CheckMenuItem(menu, ID_OPTIONS_INSPECTFONT, MF_BYCOMMAND | MF_CHECKED);
+	else
+		CheckMenuItem(menu, ID_OPTIONS_INSPECTFONT, MF_BYCOMMAND | MF_UNCHECKED);
 }
 
 LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -797,6 +806,19 @@ LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			{
 				imageMgr = new CImageMgr();
 				imageMgr->Create(this, fontGen);
+			}
+			return 0;
+
+		case ID_OPTIONS_INSPECTFONT:
+			if (inspectFont)
+			{
+				delete inspectFont;
+				inspectFont = 0;
+			}
+			else
+			{
+				inspectFont = new CInspectFont();
+				inspectFont->Create(this, fontGen);
 			}
 			return 0;
 		}
