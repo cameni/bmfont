@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -130,7 +130,7 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 		idx = ch;
 
 	GLYPHMETRICS gm;
-
+	
 	// The DC is already initialized with a transformation matrix, so here we need to use the identity matrix
 	MAT2 mat = {{0,1},{0,0},{0,0},{0,1}};
 
@@ -173,21 +173,21 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	int scale = 65536 / 8;
 
 	// Determine mininum rectangle
-	int minX = 10000<<16;
-	int maxX = -10000<<16;
-	int minY = 10000<<16;
-	int maxY = -10000<<16;
+	int64_t minX = 10000<<16;
+	int64_t maxX = -10000<<16;
+	int64_t minY = 10000<<16;
+	int64_t maxY = -10000<<16;
 	for( DWORD off = 0; off < memSize; )
 	{
 		TTPOLYGONHEADER *head = (TTPOLYGONHEADER*)(buf + off);
 		head->cb;       // Number of bytes that describe the polygon
 		head->pfxStart; // Starting point for the polygon
 
-		int x = (*(int*)&head->pfxStart.x);
-		int y = (*(int*)&head->pfxStart.y);
+		int64_t x = (*(int*)&head->pfxStart.x);
+		int64_t y = (*(int*)&head->pfxStart.y);
 
 		int polyPointCount = 1;
-		POINT pt = {x,y};
+		POINT pt = {int(x),int(y)};
 		points.push_back(pt);
 			
 		if( x < minX ) minX = x;
@@ -214,7 +214,7 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 					y = (*(int*)&curve->apfx[n].y);
 
 					polyPointCount++;
-					POINT pt = {x,y};
+					POINT pt = {int(x),int(y)};
 					points.push_back(pt);
 
 					if( x < minX ) minX = x;
@@ -227,14 +227,14 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 			{
 				for( int n = 0; n < curve->cpfx - 1; n++ )
 				{
-					int xA = x;
-					int yA = y;
+					int64_t xA = x;
+					int64_t yA = y;
 
-					int xB = (*(int*)&curve->apfx[n].x);
-					int yB = (*(int*)&curve->apfx[n].y);
+					int64_t xB = (*(int*)&curve->apfx[n].x);
+					int64_t yB = (*(int*)&curve->apfx[n].y);
 
-					int xC = (*(int*)&curve->apfx[n+1].x);
-					int yC = (*(int*)&curve->apfx[n+1].y);
+					int64_t xC = (*(int*)&curve->apfx[n+1].x);
+					int64_t yC = (*(int*)&curve->apfx[n+1].y);
 
 					if( n < curve->cpfx - 2 )
 					{
@@ -243,15 +243,15 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 					}
 
 					// Step through the quadratic bspline
-					for( DWORD ti = 1; ti <= 100; ti++ )
+					for( int64_t ti = 1; ti <= 100; ti++ )
 					{
-						int t = ti*65536/100;
-						int t2 = t/256*t/256;
+						int64_t t = ti*65536/100;
+						int64_t t2 = t/256*t/256;
 						x = (xA-2*xB+xC)/256*t2/256 + (2*xB-2*xA)/256*t/256 + xA;
 						y = (yA-2*yB+yC)/256*t2/256 + (2*yB-2*yA)/256*t/256 + yA;
 
 						polyPointCount++;
-						POINT pt = {x,y};
+						POINT pt = {int(x),int(y)};
 						points.push_back(pt);
 
 						if( x < minX ) minX = x;
@@ -278,6 +278,8 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	
 	delete[] buf;
 
+	// TODO: Check if min or max are too large to handle
+
 	if( points.size() == 0 )
 	{
 		m_width   = 1;
@@ -302,8 +304,8 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	if( maxX & 0xFFFF ) maxX += 0x10000 - (maxX & 0xFFFF);
 	if( maxY & 0xFFFF ) maxY += 0x10000 - (maxY & 0xFFFF);
 
-	m_width  = maxX/scale - minX/scale;
-	m_height = maxY/scale - minY/scale;
+	m_width  = int(maxX/scale - minX/scale);
+	m_height = int(maxY/scale - minY/scale);
 
 	// Create the image that will receive the pixels
 	m_charImg = new cImage(m_width, m_height);
@@ -345,8 +347,8 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	memset(pixels, 0, bmi.bmiHeader.biSizeImage);
 
 	// Offset all points so we do not draw outside the box
-	m_xoffset = minX;
-	m_yoffset = minY;
+	m_xoffset = int(minX);
+	m_yoffset = int(minY);
 	m_xoffset /= scale;
 	m_yoffset /= scale;
 
@@ -391,7 +393,7 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	m_width   /= 8;
 	m_height  /= 8;
 	m_xoffset /= 8;
-	m_yoffset = fontAscent - maxY/65536;
+	m_yoffset = fontAscent - int(maxY/65536);
 
 	return 0;
 }

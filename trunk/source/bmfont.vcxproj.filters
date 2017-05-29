@@ -105,6 +105,9 @@
     <ClCompile Include="unicode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="inspectfont.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imagemgr.h">
@@ -183,6 +186,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="unicode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inspectfont.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
