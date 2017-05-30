@@ -149,7 +149,7 @@ void CInspectFont::OnSize()
 		GetClientRect(hWnd, &rc);
 		MoveWindow(listView->GetHandle(), rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, TRUE);
 
-		ListView_SetColumnWidth(listView->GetHandle(), 1, rc.right-100);
+		listView->SetColumnWidth(1, rc.right - 100);
 	}
 }
 
@@ -157,14 +157,11 @@ void CInspectFont::OnViewBasic()
 {
 	view = 0;
 	if (!listView) return;
-	ListView_DeleteAllItems(listView->GetHandle());
+	listView->DeleteAllItems();
 
 	// TODO: Read basic info and add to list view
-	TCHAR buf[512];
 	listView->InsertItem(0, "Font name");
-
-	ConvertUtf8ToTChar(fontGen->GetFontName(), buf, 512);
-	ListView_SetItemText(listView->GetHandle(), 0, 1, buf);
+	listView->SetItemText(0, 1, fontGen->GetFontName());
 
 	// TODO: Identify the font file name
 	// https://stackoverflow.com/questions/16769758/get-a-font-filename-based-on-the-font-handle-hfont
@@ -174,7 +171,7 @@ void CInspectFont::OnViewKERN()
 {
 	view = 1;
 	if (!listView) return;
-	ListView_DeleteAllItems(listView->GetHandle());
+	listView->DeleteAllItems();
 
 	// TODO: Read KERN table and add to list view
 }
@@ -183,7 +180,7 @@ void CInspectFont::OnViewGPOS()
 {
 	view = 2;
 	if (!listView) return;
-	ListView_DeleteAllItems(listView->GetHandle());
+	listView->DeleteAllItems();
 
 	// TODO: Read GPOS table and add to list view
 
@@ -195,7 +192,7 @@ void CInspectFont::OnViewGSUB()
 
 	view = 3;
 	if (!listView) return;
-	ListView_DeleteAllItems(listView->GetHandle());
+	listView->DeleteAllItems();
 
 	// Read GSUB table and add to list view
 	// ref: https://www.microsoft.com/typography/otspec/gsub.htm
@@ -237,9 +234,7 @@ void CInspectFont::OnViewGSUB()
 		stringstream s;
 		s << scriptCount;
 
-		TCHAR buf[512];
-		ConvertUtf8ToTChar(s.str(), buf, 512);
-		ListView_SetItemText(listView->GetHandle(), listViewCount++, 1, buf);
+		listView->SetItemText(listViewCount++, 1, s.str());
 	}
 	
 	{
@@ -262,9 +257,7 @@ void CInspectFont::OnViewGSUB()
 		}
 
 		listView->InsertItem(listViewCount, "Script tags");
-		TCHAR buf[512];
-		ConvertUtf8ToTChar(s.str(), buf, 512);
-		ListView_SetItemText(listView->GetHandle(), listViewCount++, 1, buf);
+		listView->SetItemText(listViewCount++, 1, s.str());
 	}
 
 	SelectObject(dc, oldFont);

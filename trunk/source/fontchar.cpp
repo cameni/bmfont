@@ -299,8 +299,8 @@ int CFontChar::DrawGlyphFromOutline(HDC dc, int ch, int fontHeight, int fontAsce
 	minY -= scale/2;
 	maxX += scale/2;
 	maxY += scale/2;
-	minX &= 0xFFFF0000;
-	minY &= 0xFFFF0000;
+	minX &= 0xFFFFFFFFFFFF0000ui64;
+	minY &= 0xFFFFFFFFFFFF0000ui64;
 	if( maxX & 0xFFFF ) maxX += 0x10000 - (maxX & 0xFFFF);
 	if( maxY & 0xFFFF ) maxY += 0x10000 - (maxY & 0xFFFF);
 

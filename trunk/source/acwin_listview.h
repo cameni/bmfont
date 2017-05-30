@@ -1,6 +1,6 @@
 /*
    AngelCode Tool Box Library
-   Copyright (c) 2004-2014 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -25,6 +25,7 @@
    andreas@angelcode.com
 */
 
+// 2017-05-28 Included SetColumnWidth and DeleteAllItems
 // 2014-06-15 Converting string arguments to std::string&
 // 2011-08-23 Added column parameter to Get/SetItemText
 // 2011-08-23 Added BeginLabelEdit, EndLabelEdit, and GetEditColumn
@@ -47,9 +48,11 @@ public:
 	int Create(DWORD style, DWORD exStyle, RECT *rc, CWindow *parent, UINT id);
 
 	int InsertColumn(UINT col, const std::string &name, UINT width);
+	int SetColumnWidth(UINT col, UINT width);
 	int InsertItem(UINT item);
 	int InsertItem(UINT item, const std::string &text, long param = 0);
 	int DeleteItem(UINT item);
+	int DeleteAllItems();
 
 	int FindItem(int start, const std::string &text);
 	int FindItemByParam(int start, LPARAM param);
