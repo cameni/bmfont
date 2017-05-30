@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2014 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -143,7 +143,7 @@ void CImageMgr::OnSize()
 		GetClientRect(hWnd, &rc);
 		MoveWindow(listView->GetHandle(), rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, TRUE);
 
-		ListView_SetColumnWidth(listView->GetHandle(), 1, rc.right-50);
+		listView->SetColumnWidth(1, rc.right-50);
 	}
 }
 
@@ -151,7 +151,7 @@ void CImageMgr::RefreshList()
 {
 	if( listView )
 	{
-		ListView_DeleteAllItems(listView->GetHandle());
+		listView->DeleteAllItems();
 
 		for( int n = 0; n < fontGen->GetIconImageCount(); n++ )
 		{
@@ -163,10 +163,7 @@ void CImageMgr::RefreshList()
 			id_stream << id;
 
 			listView->InsertItem(n, id_stream.str(), id);
-
-			TCHAR buf[512];
-			ConvertUtf8ToTChar(filename, buf, 512);
-			ListView_SetItemText(listView->GetHandle(), n, 1, buf);
+			listView->SetItemText(n, 1, filename);
 		}
 	}
 
@@ -238,9 +235,6 @@ void CImageMgr::OnEditImage()
 	int item = -1;
 	if( (item = listView->GetNextItem(item, LVNI_FOCUSED)) != -1 )
 	{
-		TCHAR buf[256];
-		ListView_GetItemText(listView->GetHandle(), item, 1, buf, 256);
-
 		int oldId;
 		listView->GetItemParam(item, (LPARAM*)&oldId);
 

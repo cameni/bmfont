@@ -1,6 +1,6 @@
 /*
    AngelCode Tool Box Library
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2017 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -25,6 +25,7 @@
    andreas@angelcode.com
 */
 
+// 2017-05-28 Included SetColumnWidth and DeleteAllItems
 // 2016-02-21 Fixes for Win64
 // 2014-06-15 Support compiling for both unicode and multibyte Windows
 // 2011-08-23 Added column parameter to Get/SetItemText
@@ -175,6 +176,14 @@ int CListView::InsertColumn(UINT col, const string &name, UINT width)
 	return 0;
 }
 
+int CListView::SetColumnWidth(UINT col, UINT width)
+{
+	if (ListView_SetColumnWidth(hWnd, col, width) != TRUE)
+		return -1;
+
+	return 0;
+}
+
 int CListView::InsertItem(UINT item)
 {
 	LVITEM lvi;
@@ -216,7 +225,12 @@ int CListView::InsertItem(UINT item, const string &text, long param)
 
 int CListView::DeleteItem(UINT item)
 {
-	return ListView_DeleteItem(hWnd, item);
+	return ListView_DeleteItem(hWnd, item) ? 0 : -1;
+}
+
+int CListView::DeleteAllItems()
+{
+	return ListView_DeleteAllItems(hWnd) ? 0 : -1;
 }
 
 int CListView::GetItemParam(UINT item, LPARAM *param)
