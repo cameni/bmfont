@@ -159,12 +159,15 @@ void CInspectFont::OnViewBasic()
 	if (!listView) return;
 	listView->DeleteAllItems();
 
-	// TODO: Read basic info and add to list view
-	listView->InsertItem(0, "Font name");
-	listView->SetItemText(0, 1, fontGen->GetFontName());
+	int countItem = 0;
 
-	// TODO: Identify the font file name
-	// https://stackoverflow.com/questions/16769758/get-a-font-filename-based-on-the-font-handle-hfont
+	// Read basic info and add to list view
+	listView->InsertItem(countItem, "Font name");
+	listView->SetItemText(countItem++, 1, fontGen->GetFontName());
+
+	// Identify the font file name
+	listView->InsertItem(countItem, "File name");
+	listView->SetItemText(countItem++, 1, GetFontFileName(fontGen->GetFontName(), fontGen->IsBold(), fontGen->IsItalic()));
 }
 
 void CInspectFont::OnViewKERN()
