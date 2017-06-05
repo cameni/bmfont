@@ -76,4 +76,8 @@ int EnumUnicodeGlyphs(HDC dc, std::map<unsigned int, unsigned int> &unicodeToGly
 #define GETUINT(x)   DWORD(SWAP32(*(DWORD*)(x)))
 #define GETINT(x)    int(SWAP32(*(DWORD*)(x)))
 
+std::string GetFontFileName(const std::string &faceName, bool bold, bool italic);
+void ConvertWCharToUtf8(const WCHAR *buf, std::string &utf8);
+void ConvertUtf8ToWChar(const std::string &utf8, WCHAR *buf, size_t bufSize);
+
 #endif

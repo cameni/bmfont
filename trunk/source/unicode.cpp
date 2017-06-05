@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <map>
+#include <sstream>
 using std::map;
 
 #include "dynamic_funcs.h"
@@ -1345,3 +1346,95 @@ int EnumTrueTypeCMAP(HDC dc, map<unsigned int, unsigned int> &unicodeToGlyphMap)
 
 	return 0;
 }
+
+void ConvertWCharToUtf8(const WCHAR *buf, std::string &utf8)
+{
+	char bufUTF8[1024];
+	WideCharToMultiByte(CP_UTF8, 0, buf, -1, bufUTF8, 1024, NULL, NULL);
+	utf8 = bufUTF8;
+}
+
+void ConvertUtf8ToWChar(const std::string &utf8, WCHAR *buf, size_t bufSize)
+{
+	MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, buf, int(bufSize));
+}
+
+// ref: https://stackoverflow.com/questions/11387564/get-a-font-filepath-from-name-and-style-in-c-windows
+// ref: https://stackoverflow.com/questions/16769758/get-a-font-filename-based-on-the-font-handle-hfont
+std::string GetFontFileName(const std::string &faceName, bool bold, bool italic)
+{
+	static const LPWSTR fontRegistryPath = L"Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
+
+	HKEY hKey;
+	LONG result;
+	WCHAR buf[512];
+	ConvertUtf8ToWChar(faceName, buf, 512);
+	std::wstring wsFaceName(buf);
+
+	// Open Windows font registry key
+	result = RegOpenKeyExW(HKEY_LOCAL_MACHINE, fontRegistryPath, 0, KEY_READ, &hKey);
+	if (result != ERROR_SUCCESS) 
+		return "";
+
+	DWORD maxValueNameSize, maxValueDataSize;
+	result = RegQueryInfoKeyW(hKey, 0, 0, 0, 0, 0, 0, 0, &maxValueNameSize, &maxValueDataSize, 0, 0);
+	if (result != ERROR_SUCCESS)
+		return "";
+
+	DWORD valueIndex = 0;
+	LPWSTR valueName = new WCHAR[maxValueNameSize];
+	LPBYTE valueData = new BYTE[maxValueDataSize];
+	DWORD valueNameSize, valueDataSize, valueType;
+	std::wstring wsFontFile;
+
+	// Look for a matching font name
+	do 
+	{
+		wsFontFile.clear();
+		valueDataSize = maxValueDataSize;
+		valueNameSize = maxValueNameSize;
+
+		result = RegEnumValueW(hKey, valueIndex, valueName, &valueNameSize, 0, &valueType, valueData, &valueDataSize);
+
+		valueIndex++;
+
+		if (result != ERROR_SUCCESS || valueType != REG_SZ)
+			continue;
+
+		std::wstring wsValueName(valueName, valueNameSize);
+
+		// Found a match
+		// TODO: The face name is not always the first part of the regkey
+		//       e.g. The font "Microsoft JhengHei UI" matches the regkey "Microsoft JhengHei & Microsoft JhengHei UI (TrueType)"
+		// TODO: It is not enough that the face name is part of the regkey name
+		//       e.g. The font "DejaVu Sans" shouldn't match "DejaVu Sans Condensed (TrueType)"
+		if (wcsstr(wsValueName.c_str(), wsFaceName.c_str()) != 0)
+		{
+			// TODO: Make sure the font data actually match that of the file
+			wsFontFile.assign((LPWSTR)valueData, valueDataSize);
+			break;
+		}
+	} while (result != ERROR_NO_MORE_ITEMS);
+
+	delete[] valueName;
+	delete[] valueData;
+
+	RegCloseKey(hKey);
+
+	if (wsFontFile.empty())
+		return "";
+
+	// Build full font file path
+	WCHAR winDir[MAX_PATH];
+	GetWindowsDirectoryW(winDir, MAX_PATH);
+
+	std::wstringstream ss;
+	ss << winDir << "\\Fonts\\" << wsFontFile;
+	wsFontFile = ss.str();
+
+	std::string out;
+	ConvertWCharToUtf8(wsFontFile.c_str(), out);
+
+	return out;
+}
+
