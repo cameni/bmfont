@@ -22,6 +22,7 @@
     <ProjectGuid>{B0B89315-1F66-43FB-8A0B-07B976A72B51}</ProjectGuid>
     <RootNamespace>bmfont_com</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">

@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2019 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -70,6 +70,9 @@ CFontGen::CFontGen()
 	isBold                 = false;
 	isItalic               = false;
 	useUnicode             = true;
+	autoFitNumPages        = 0;
+	autoFitFontSizeMin     = 0;
+	autoFitFontSizeMax     = 0;
 	paddingLeft            = 0;
 	paddingRight           = 0;
 	paddingUp              = 0;
@@ -81,6 +84,8 @@ CFontGen::CFontGen()
 	scaleH                 = 100;
 	fixedHeight            = false;
 	forceZero              = false;
+	paddingFromWidth       = 0;
+	widthPaddingFactor     = 0.0f;
 
 	outWidth           = 256;
 	outHeight          = 256;
@@ -112,6 +117,8 @@ CFontGen::~CFontGen()
 	ClearSubsets();
 
 	ClearPages();
+	ClearChars();
+	ClearIcons();
 
 	ClearIconImages();
 }
@@ -748,6 +755,15 @@ int CFontGen::SetForceZero(bool force)
 	return 0;
 }
 
+int CFontGen::SetWidthPaddingFactor(float factor)
+{
+	if( isWorking ) return -1;
+	arePagesGenerated = false;
+
+	widthPaddingFactor = factor;
+	return 0;
+}
+
 int CFontGen::SetUseSmoothing(bool set)
 {
 	if( isWorking ) return -1;
@@ -781,6 +797,33 @@ int CFontGen::SetUseClearType(bool set)
 	arePagesGenerated = false;
 
 	useClearType = set;
+	return 0;
+}
+
+int CFontGen::SetAutoFitNumPages(int numPages)
+{
+	if( isWorking ) return -1;
+	arePagesGenerated = false;
+
+	autoFitNumPages = numPages;
+	return 0;
+}
+
+int CFontGen::SetAutoFitFontSizeMin(int fontSize)
+{
+	if( isWorking ) return -1;
+	arePagesGenerated = false;
+
+	autoFitFontSizeMin = fontSize;
+	return 0;
+}
+
+int CFontGen::SetAutoFitFontSizeMax(int fontSize)
+{
+	if( isWorking ) return -1;
+	arePagesGenerated = false;
+
+	autoFitFontSizeMax = fontSize;
 	return 0;
 }
 
@@ -964,6 +1007,11 @@ bool CFontGen::GetForceZero() const
 	return forceZero;
 }
 
+float CFontGen::GetWidthPaddingFactor() const
+{
+	return widthPaddingFactor;
+}
+
 bool CFontGen::IsUsingSmoothing() const
 {
 	return useSmoothing;
@@ -982,6 +1030,21 @@ bool CFontGen::GetUseHinting() const
 bool CFontGen::GetUseClearType() const
 {
 	return useClearType;
+}
+
+int CFontGen::GetAutoFitNumPages() const
+{
+	return autoFitNumPages;
+}
+
+int CFontGen::GetAutoFitFontSizeMin() const
+{
+	return autoFitFontSizeMin;
+}
+
+int CFontGen::GetAutoFitFontSizeMax() const
+{
+	return autoFitFontSizeMax;
 }
 
 bool CFontGen::IsItalic() const
@@ -1041,6 +1104,22 @@ const SSubset *CFontGen::GetUnicodeSubset(unsigned int set)
 	return 0;
 }
 
+void CFontGen::ChangeAutoFitFontSize(int fontSize)
+{
+	assert( isWorking );
+	assert( !arePagesGenerated );
+
+	this->fontSize = fontSize;
+
+	memset(disabled, 0, sizeof(disabled));
+	memset(noFit, 0, sizeof(noFit));
+
+	ClearPages();
+	ClearChars();	// NOT clearing icons
+	DetermineWidthPadding();
+}
+
+
 // Internal
 void CFontGen::ResetFont()
 {
@@ -1050,6 +1129,7 @@ void CFontGen::ResetFont()
 		memset(noFit, 0, sizeof(noFit));
 
 		DetermineExistingChars();
+		DetermineWidthPadding();
 	}
 	fontChanged = false;
 }
@@ -1212,6 +1292,31 @@ int CFontGen::GetNonUnicodeGlyph(unsigned int ch) const
 }
 
 // Internal
+void CFontGen::DetermineWidthPadding()
+{
+	if (widthPaddingFactor == 0.0f)
+	{
+		paddingFromWidth = 0;
+		return;
+	}
+
+	HDC dc = GetDC(0);
+
+	HFONT font = CreateFont(0);
+	HFONT oldFont = (HFONT)SelectObject(dc, font);
+
+	TEXTMETRIC tm;
+	GetTextMetrics(dc, &tm);
+
+	paddingFromWidth = int(widthPaddingFactor * float(tm.tmAveCharWidth));
+
+	SelectObject(dc, oldFont);
+	DeleteObject(font);
+
+	ReleaseDC(0, dc);
+}
+
+// Internal
 void CFontGen::ClearPages()
 {
 	for( int n = 0; n < (signed)pages.size(); n++ )
@@ -1221,15 +1326,27 @@ void CFontGen::ClearPages()
 	}
 
 	pages.clear();
+}
 
+void CFontGen::ClearChars()
+{
 	for( int n = 0; n < maxUnicodeChar+1; n++ )
 	{
-		if( chars[n] ) delete chars[n];
+		if( chars[n] && chars[n]->m_isChar) delete chars[n];
 		chars[n] = 0;
 	}
 
 	if( invalidCharGlyph ) delete invalidCharGlyph;
 	invalidCharGlyph = 0;
+}
+
+void CFontGen::ClearIcons()
+{
+	for( int n = 0; n < maxUnicodeChar+1; n++ )
+	{
+		if( chars[n] && !chars[n]->m_isChar) delete chars[n];
+		chars[n] = 0;
+	}
 }
 
 #ifdef TRACE_GENERATE
@@ -1257,12 +1374,346 @@ int CFontGen::CreatePage()
 		return -1;
 	}
 
-	page->SetPadding(paddingLeft, paddingUp, paddingRight, paddingDown);
+	page->SetPadding(paddingLeft + paddingFromWidth, paddingUp + paddingFromWidth, paddingRight + paddingFromWidth, paddingDown + paddingFromWidth);
 	page->SetIntendedFormat(outBitDepth, fourChnlPacked, alphaChnl, redChnl, greenChnl, blueChnl);
 	pages.push_back(page);
 
 	return (int)pages.size() - 1;
 }
+
+// Internal
+// AutoFitter algorithm and original code contributed by Sucker Punch Productions
+class CAutoFitter
+{
+	// auto fit finds the largest font size that fits in the given number of pages.
+	// the search will need to find two sizes: one that fits, and a larger size that doesn't.
+	// starting with an initial font size and a min/max of sizes to accept, here's the algorithm.
+	//  - start with a first size set as the initial size + 1.
+	//  - generate the pages for that size.
+	//  - if the first size fits in the number of pages, then start increasing font sizes to find a size that does not fit.
+	//  - if the first size does not fit, then start reducing font sizes to find a size that does fit.
+	//  - the reduction or incrementing of the font size is geometric, doubling each iteration, but limited to the
+	//    overall autofit size limits.
+	//  - after the reduction/increment phase, there should be an upper and lower limit to the candidate best size.
+	//  - use a binary search to narrow in on a size that fits, but where the size+1 does not fit.
+	//
+	//  - when not autofitting, we still go through one phase to put all the glyphs into as many pages as necessary.
+
+public:
+	CAutoFitter(CFontGen * gen)
+	: fontGen(gen),
+	  state(e_unknown),
+	  autoFitFontSizeMin((gen->GetAutoFitFontSizeMin() > 0) ? gen->GetAutoFitFontSizeMin() : 4),
+	  autoFitFontSizeMax((gen->GetAutoFitFontSizeMax() > 0) ? gen->GetAutoFitFontSizeMax() : 1024),
+	  currentFontSizeDelta(0),
+	  latestGoodFontSize(0),
+	  latestBadFontSize(0)
+	{
+		if (fontGen->GetAutoFitNumPages() > 0)
+		{
+			if (autoFitFontSizeMin > autoFitFontSizeMax)
+			{
+				swap(autoFitFontSizeMin, autoFitFontSizeMax);
+			}
+
+			// our search method here requires at least two passes: one good and one bad.
+			// assuming that the initial fontSize is going to be our final result, we start with one
+			// greater than that, in hopes of having to do the minimal number of passes.
+			// that is, we expect fontSize+1 to not fit, and the reduction phase to start with a single
+			// size reduction, and that the search will be done with the "latest" size been a size that fit.
+
+			int newFontSize = fontGen->GetFontSize() + 1;
+
+			if (newFontSize < autoFitFontSizeMin || newFontSize > autoFitFontSizeMax)
+			{
+				latestGoodFontSize = autoFitFontSizeMin;
+				latestBadFontSize = autoFitFontSizeMax;
+				newFontSize = (latestBadFontSize + latestGoodFontSize) / 2;
+				assert( FBinarySearchReady() );
+
+#ifdef TRACE_GENERATE
+				trace << "state = e_search_in" << endl;
+				trace.flush();
+#endif
+				state = e_search_in;
+			}
+			else
+			{
+#ifdef TRACE_GENERATE
+				trace << "state = e_check_base_size" << endl;
+				trace.flush();
+#endif
+				state = e_check_base_size;
+			}
+
+			if (newFontSize != fontGen->GetFontSize())
+			{
+				fontGen->ChangeAutoFitFontSize(newFontSize);
+			}
+		}
+		else
+		{
+#ifdef TRACE_GENERATE
+			trace << "state = e_no_search" << endl;
+			trace.flush();
+#endif
+			state = e_no_search;
+		}
+	}
+
+	bool KeepSearching()
+	{
+		return state != e_complete;
+	}
+
+	bool AllowNewPage()
+	{
+		switch (state)
+		{
+		case e_no_search:
+			return true;
+
+		case e_unknown:
+		case e_complete:
+			assert(false);
+			return true;
+		}
+
+		return (fontGen->GetNumPages() < fontGen->GetAutoFitNumPages());
+	}
+
+	bool HasFailed(bool anyLeftover)
+	{
+		// quick early exit for the non-searching case.
+
+		if (state == e_no_search)
+		{
+			assert( !anyLeftover );
+#ifdef TRACE_GENERATE
+			trace << "state = e_complete" << endl;
+			trace.flush();
+#endif
+			state = e_complete;
+			return false; // no failure
+		}
+
+#ifdef TRACE_GENERATE
+		trace << "checking completion in state " << state << (anyLeftover ? " with " : " without ") << "leftovers" << endl;
+		trace.flush();
+#endif
+		if (anyLeftover)
+		{
+			latestBadFontSize = fontGen->GetFontSize();
+		}
+		else
+		{
+			latestGoodFontSize = fontGen->GetFontSize();
+		}
+
+#ifdef TRACE_GENERATE
+		trace << "fontSizeLatestGood: " << latestGoodFontSize << " fontSizeLatestBad: " << latestBadFontSize << endl;
+		trace.flush();
+#endif
+
+		int newFontSize = 0;
+
+		switch (state)
+		{
+		case e_check_base_size:
+
+			if (anyLeftover)
+			{
+				// failure: font size did not fit within given number of pages.
+				// start searching down for a size that succeeds.
+
+				assert( latestGoodFontSize == 0 );
+				assert( latestBadFontSize > 0 );
+
+				currentFontSizeDelta = -1;
+			}
+			else
+			{
+				// success: font size fit within given number of pages.
+				// start searching up for a size that fails.
+
+				assert( latestGoodFontSize > 0 );
+				assert( latestBadFontSize == 0 );
+
+				currentFontSizeDelta = 1;
+			}
+
+			newFontSize = fontGen->GetFontSize() + currentFontSizeDelta;
+#ifdef TRACE_GENERATE
+			trace << "state = e_search_out fontSizeDelta:" << currentFontSizeDelta << endl;
+			trace.flush();
+#endif
+			state = e_search_out;
+			break;
+
+		case e_search_out:
+
+			if (SearchFinished())
+			{
+				newFontSize = FontSizeComplete();
+				break;
+			}
+						
+			if (!BinarySearchReady())
+			{
+				currentFontSizeDelta *= 2;
+							
+#ifdef TRACE_GENERATE
+				trace << "new fontSizeDelta:" << currentFontSizeDelta << endl;
+				trace.flush();
+#endif
+				newFontSize = fontGen->GetFontSize() + currentFontSizeDelta;
+				newFontSize = min(newFontSize, autoFitFontSizeMax);
+				newFontSize = max(newFontSize, autoFitFontSizeMin);
+													
+				if (newFontSize == fontGen->GetFontSize())
+				{
+					// we've reached the edge of our range. binary search within that edge
+					// and our other known boundry.
+
+					if (currentFontSizeDelta < 0)
+					{
+						assert( latestGoodFontSize == 0 );
+						assert( latestBadFontSize > 0 );
+
+						latestGoodFontSize = newFontSize;
+					}
+					else
+					{
+						assert( latestGoodFontSize > 0 );
+						assert( latestBadFontSize == 0 );
+
+						latestBadFontSize = newFontSize;
+					}
+
+					assert( FBinarySearchReady() );
+				}
+			}
+
+			if (BinarySearchReady())
+			{
+				newFontSize = (latestBadFontSize + latestGoodFontSize) / 2;
+#ifdef TRACE_GENERATE
+				trace << "state = e_search_in" << endl;
+				trace.flush();
+#endif
+				state = e_search_in;
+			}
+			break;
+
+		case e_search_in:
+			if (latestGoodFontSize == latestBadFontSize)
+			{
+				// whoa. we have no where else to search.
+
+#ifdef TRACE_GENERATE
+				trace << "state = e_complete" << endl;
+				trace.flush();
+#endif
+
+				state = e_complete;
+				break;
+			}
+			else if (SearchFinished())
+			{
+				newFontSize = FontSizeComplete();
+				break;
+			}
+
+			newFontSize = (latestBadFontSize + latestGoodFontSize) / 2;
+			break;
+
+		case e_ensure_good:
+#ifdef TRACE_GENERATE
+			trace << "state = e_complete" << endl;
+			trace.flush();
+#endif
+			state = e_complete;
+			break;
+
+		default:
+			assert( false );
+			return true; // failure
+		}
+
+		if (state == e_complete)
+		{
+			return anyLeftover; // leftovers when we've moved to complete is a failure
+		}
+		else if (newFontSize)
+		{
+#ifdef TRACE_GENERATE
+			trace << "fontSizeNew: " << newFontSize << endl;
+			trace.flush();
+#endif
+			assert( newFontSize != fontGen->GetFontSize() );
+			fontGen->ChangeAutoFitFontSize(newFontSize);
+		}
+
+		return false; // no failure
+	}
+
+protected:
+
+	enum ESearchState
+	{
+		e_unknown,
+		e_no_search,
+		e_check_base_size,
+		e_search_out,
+		e_search_in,
+		e_ensure_good,
+		e_complete,
+	};
+
+	bool SearchFinished()
+	{
+		return (latestBadFontSize > 0 && latestGoodFontSize > 0 && (latestBadFontSize - latestGoodFontSize) == 1);
+	}
+
+	bool BinarySearchReady()
+	{
+		return (latestBadFontSize > 0 && latestGoodFontSize > 0);
+	}
+
+	int FontSizeComplete()
+	{
+		// we're done! we may have to run one more pass to ensure that latestGoodFontSize is the latest one
+		// we've generated pages for.
+
+		if (latestGoodFontSize == fontGen->GetFontSize())
+		{
+#ifdef TRACE_GENERATE
+			trace << "state = e_complete" << endl;
+			trace.flush();
+#endif
+			state = e_complete;
+		}
+		else
+		{
+#ifdef TRACE_GENERATE
+			trace << "state = e_ensure_good" << endl;
+			trace.flush();
+#endif
+			state = e_ensure_good;
+		}
+
+		return latestGoodFontSize;
+	}
+
+	CFontGen * fontGen;
+	ESearchState state;
+
+	int autoFitFontSizeMin;		// minimum font size to search
+	int autoFitFontSizeMax;		// maximum font size to search
+	int currentFontSizeDelta;	// delta during e_search_out
+	int latestGoodFontSize;		// most recent size that fit
+	int latestBadFontSize;		// most recent size that did not fit
+};
 
 // Internal
 void CFontGen::InternalGeneratePages()
@@ -1281,6 +1732,8 @@ void CFontGen::InternalGeneratePages()
 #endif
 
 	ClearPages();
+	ClearChars();
+	ClearIcons();
 
 	bool didNotFit = false;
 	memset(noFit, 0, sizeof(noFit));
@@ -1319,8 +1772,8 @@ void CFontGen::InternalGeneratePages()
 
 		if( chars[ch]->m_height > 0 && chars[ch]->m_width > 0 )
 		{
-			if( (chars[ch]->m_height + paddingUp + paddingDown) > outHeight-spacingVert || 
-				(chars[ch]->m_width + paddingRight + paddingLeft) > outWidth-spacingHoriz )
+			if( (chars[ch]->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert || 
+				(chars[ch]->m_width + paddingRight + paddingLeft + 2 * paddingFromWidth) > outWidth-spacingHoriz )
 			{
 				didNotFit = true;
 				noFit[ch] = true;
@@ -1349,72 +1802,189 @@ void CFontGen::InternalGeneratePages()
 		}
 	}
 
-	// Draw each of the chars into individual images
-	HFONT font = CreateFont(0);
-	for( int n = 0; n < maxChars; n++ )
+	CAutoFitter autofitter(this);
+
+	while (isWorking && autofitter.KeepSearching())
 	{
-		if( !disabled[n] && selected[n] )
+		// Draw each of the chars into individual images
+		HFONT font = CreateFont(0);
+		for( int n = 0; n < maxChars; n++ )
 		{
-			// Unless the image is taken by an imported icon
-			// Draw the character in a separate image
-			// Determine the dimensions of the character
-			if( chars[n] == 0 )
+			if( !disabled[n] && selected[n] )
 			{
-				chars[n] = new CFontChar();
-				int r = chars[n]->DrawChar(font, n, this);
-				if( r < 0 )
+				// Unless the image is taken by an imported icon
+				// Draw the character in a separate image
+				// Determine the dimensions of the character
+				if( chars[n] == 0 )
 				{
-					// The character couldn't be drawn (probably due to out of memory)
-					outOfMemory = true;
-					delete chars[n];
-					chars[n] = 0;
-					stopWorking = true;
-
-#ifdef TRACE_GENERATE
-					trace << "Out of memory when drawing character [" << n << "]" << endl;
-					trace.flush();
-#endif
-				}
-				if( outlineThickness && chars[n] )
-					chars[n]->AddOutline(outlineThickness);
-
-#ifdef TRACE_GENERATE
-//		trace << "Character [" << n << "] was drawn" << endl;
-//		trace.flush();
-#endif
-
-				if( chars[n] && chars[n]->m_height > 0 && chars[n]->m_width > 0 )
-				{
-					if( (chars[n]->m_height + paddingUp + paddingDown) > outHeight-spacingVert || 
-						(chars[n]->m_width + paddingRight + paddingLeft) > outWidth-spacingHoriz )
+					chars[n] = new CFontChar();
+					int r = chars[n]->DrawChar(font, n, this);
+					if( r < 0 )
 					{
-						didNotFit = true;
-						noFit[n] = true;	
-
-						// Delete the character again so that it isn't considered again
+						// The character couldn't be drawn (probably due to out of memory)
+						outOfMemory = true;
 						delete chars[n];
 						chars[n] = 0;
+						stopWorking = true;
 
 #ifdef TRACE_GENERATE
-						trace << "Character [" << n << "] is too large to fit texture" << endl;
+						trace << "Out of memory when drawing character [" << n << "]" << endl;
 						trace.flush();
 #endif
 					}
+					if( outlineThickness && chars[n] )
+						chars[n]->AddOutline(outlineThickness);
+
+#ifdef TRACE_GENERATE
+//					trace << "Character [" << n << "] was drawn" << endl;
+//					trace.flush();
+#endif
+
+					if( chars[n] && chars[n]->m_height > 0 && chars[n]->m_width > 0 )
+					{
+						if( (chars[n]->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert || 
+							(chars[n]->m_width + paddingRight + paddingLeft + 2 * paddingFromWidth) > outWidth-spacingHoriz )
+						{
+							didNotFit = true;
+							noFit[n] = true;	
+
+							// Delete the character again so that it isn't considered again
+							delete chars[n];
+							chars[n] = 0;
+
+#ifdef TRACE_GENERATE
+							trace << "Character [" << n << "] is too large to fit texture" << endl;
+							trace.flush();
+#endif
+						}
+					}
+				}
+				counter++;
+
+				if( stopWorking )
+				{
+					if( outOfMemory )
+					{
+						// Free up memory so the user can continue to use the app
+						ClearPages();
+						ClearChars();
+						ClearIcons();
+					}
+
+					status    = 0;
+					isWorking = false;
+					DeleteObject(font);
+
+#ifdef TRACE_GENERATE
+					trace << "Aborted" << endl;
+					trace.close();
+#endif
+
+					return;
 				}
 			}
-			counter++;
+		}
+
+#ifdef TRACE_GENERATE
+		trace << counter << " characters were drawn" << endl;
+		trace.flush();
+#endif
+
+		// Add the invalid char glyph
+		if( outputInvalidCharGlyph )
+		{
+			invalidCharGlyph = new CFontChar();
+			int r = invalidCharGlyph->DrawInvalidCharGlyph(font, this);
+			if( r < 0 )
+			{
+				// The character couldn't be drawn (probably due to out of memory)
+				outOfMemory = true;
+				delete invalidCharGlyph;
+				invalidCharGlyph = 0;
+				stopWorking = true;
+
+#ifdef TRACE_GENERATE
+				trace << "Out of memory when drawing invalid char" << endl;
+				trace.flush();
+#endif
+			}
+			if( outlineThickness && invalidCharGlyph )
+				invalidCharGlyph->AddOutline(outlineThickness);
+
+#ifdef TRACE_GENERATE
+			trace << "Invalid char was drawn" << endl;
+			trace.flush();
+#endif
+
+			if( invalidCharGlyph &&
+				(invalidCharGlyph->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert || 
+				(invalidCharGlyph->m_width + paddingRight + paddingLeft + 2 * paddingFromWidth) > outWidth-spacingHoriz )
+			{
+				didNotFit = true;
+
+				// Delete the character again so that it isn't considered again
+				delete invalidCharGlyph;
+				invalidCharGlyph = 0;
+
+#ifdef TRACE_GENERATE
+				trace << "Invalid char is too large to fit texture" << endl;
+				trace.flush();
+#endif
+			}
+		}
+
+		DeleteObject(font);
+
+		// Build a list of used characters
+		status = 2;
+		counter = 0;
+
+		static CFontChar *ch[maxUnicodeChar+2];
+		int numChars = 0;
+		for( int n = 0; n < maxChars; n++ )
+		{
+			if( chars[n] )
+				ch[numChars++] = chars[n];
+		}
+
+		if( outputInvalidCharGlyph && invalidCharGlyph )
+			ch[numChars++] = invalidCharGlyph;
+
+		// Create pages until there are no more chars
+		while( numChars > 0 )
+		{
+#ifdef TRACE_GENERATE
+			trace << "There are " << numChars << " left to add to textures" << endl;
+			trace.flush();
+#endif
+
+			if (!autofitter.AllowNewPage())
+			{
+#ifdef TRACE_GENERATE
+				trace << "Stopping after " << GetNumPages() << " pages" << endl;
+				trace.flush();
+#endif
+				break;
+			}
+
+			int page = CreatePage();
 
 			if( stopWorking )
 			{
 				if( outOfMemory )
 				{
-					// Free up memory so the user can continue to use the app
+#ifdef TRACE_GENERATE
+					trace << "Clearing memory" << endl;
+					trace.flush();
+#endif
+					// Free up memory so the user can continue to work
 					ClearPages();
+					ClearChars();
+					ClearIcons();
 				}
 
 				status    = 0;
 				isWorking = false;
-				DeleteObject(font);
 
 #ifdef TRACE_GENERATE
 				trace << "Aborted" << endl;
@@ -1423,135 +1993,60 @@ void CFontGen::InternalGeneratePages()
 
 				return;
 			}
-		}
-	}
 
 #ifdef TRACE_GENERATE
-	trace << counter << " characters were drawn" << endl;
-	trace.flush();
-#endif
-
-	// Add the invalid char glyph
-	if( outputInvalidCharGlyph )
-	{
-		invalidCharGlyph = new CFontChar();
-		int r = invalidCharGlyph->DrawInvalidCharGlyph(font, this);
-		if( r < 0 )
-		{
-			// The character couldn't be drawn (probably due to out of memory)
-			outOfMemory = true;
-			delete invalidCharGlyph;
-			invalidCharGlyph = 0;
-			stopWorking = true;
-
-#ifdef TRACE_GENERATE
-			trace << "Out of memory when drawing invalid char" << endl;
+			trace << "Page " << page << " was created" << endl;
 			trace.flush();
 #endif
-		}
-		if( outlineThickness && invalidCharGlyph )
-			invalidCharGlyph->AddOutline(outlineThickness);
+
+			pages[page]->AddChars(ch, numChars);
 
 #ifdef TRACE_GENERATE
-		trace << "Invalid char was drawn" << endl;
-		trace.flush();
-#endif
-
-		if( invalidCharGlyph &&
-			(invalidCharGlyph->m_height + paddingUp + paddingDown) > outHeight-spacingVert || 
-			(invalidCharGlyph->m_width + paddingRight + paddingLeft) > outWidth-spacingHoriz )
-		{
-			didNotFit = true;
-
-			// Delete the character again so that it isn't considered again
-			delete invalidCharGlyph;
-			invalidCharGlyph = 0;
-
-#ifdef TRACE_GENERATE
-			trace << "Invalid char is too large to fit texture" << endl;
+			trace << "Compacting list of remaining characters" << endl;
 			trace.flush();
 #endif
-		}
-	}
 
-	DeleteObject(font);
-
-	// Build a list of used characters
-	status = 2;
-	counter = 0;
-
-	static CFontChar *ch[maxUnicodeChar+2];
-	int numChars = 0;
-	for( int n = 0; n < maxChars; n++ )
-	{
-		if( chars[n] )
-			ch[numChars++] = chars[n];
-	}
-
-	if( outputInvalidCharGlyph && invalidCharGlyph )
-		ch[numChars++] = invalidCharGlyph;
-
-	// Create pages until there are no more chars
-	while( numChars > 0 )
-	{
-#ifdef TRACE_GENERATE
-		trace << "There are " << numChars << " left to add to textures" << endl;
-		trace.flush();
-#endif
-
-		int page = CreatePage();
-
-		if( stopWorking )
-		{
-			if( outOfMemory )
+			// Compact list
+			for( int n = 0; n < numChars; n++ )
 			{
-#ifdef TRACE_GENERATE
-				trace << "Clearing memory" << endl;
-				trace.flush();
-#endif
-				// Free up memory so the user can continue to work
-				ClearPages();
-			}
-
-			status    = 0;
-			isWorking = false;
-
-#ifdef TRACE_GENERATE
-			trace << "Aborted" << endl;
-			trace.close();
-#endif
-
-			return;
-		}
-
-#ifdef TRACE_GENERATE
-		trace << "Page " << page << " was created" << endl;
-		trace.flush();
-#endif
-
-		pages[page]->AddChars(ch, numChars);
-
-#ifdef TRACE_GENERATE
-		trace << "Compacting list of remaining characters" << endl;
-		trace.flush();
-#endif
-
-		// Compact list
-		for( int n = 0; n < numChars; n++ )
-		{
-			if( ch[n] == 0 )
-			{
-				// Find the last char
-				for( numChars--; numChars > n; numChars-- )
+				if( ch[n] == 0 )
 				{
-					if( ch[numChars] )
+					// Find the last char
+					for( numChars--; numChars > n; numChars-- )
 					{
-						ch[n] = ch[numChars];
-						ch[numChars] = 0;
-						break;
+						if( ch[numChars] )
+						{
+							ch[n] = ch[numChars];
+							ch[numChars] = 0;
+							break;
+						}
 					}
 				}
 			}
+		}
+
+		bool anyLeftover = (numChars > 0);
+
+		if( autofitter.HasFailed(anyLeftover))
+		{
+			status    = 0;
+			isWorking = false;
+			arePagesGenerated = false;
+			didNotFit = true;
+
+			for( int n = 0; n < numChars; n++ )
+			{
+				if( ch[n] == 0 )
+					continue;
+
+				noFit[ch[n]->m_id] = true;
+			}
+
+#ifdef TRACE_GENERATE
+			trace << "Did not fit." << endl;
+			trace.close();
+#endif
+			return;
 		}
 	}
 
@@ -1659,7 +2154,7 @@ int CFontGen::SaveFont(const char *szFile)
 	{
 		fprintf(f, "<?xml version=\"1.0\"?>\r\n");
 		fprintf(f, "<font>\r\n");
-		fprintf(f, "  <info face=\"%s\" size=\"%d\" bold=\"%d\" italic=\"%d\" charset=\"%s\" unicode=\"%d\" stretchH=\"%d\" smooth=\"%d\" aa=\"%d\" padding=\"%d,%d,%d,%d\" spacing=\"%d,%d\" outline=\"%d\"/>\r\n", fontName.c_str(), fontSize, isBold, isItalic, useUnicode ? "" : GetCharSetName(charSet).c_str(), useUnicode, scaleH, useSmoothing, aa, paddingUp, paddingRight, paddingDown, paddingLeft, spacingHoriz, spacingVert, outlineThickness);
+		fprintf(f, "  <info face=\"%s\" size=\"%d\" bold=\"%d\" italic=\"%d\" charset=\"%s\" unicode=\"%d\" stretchH=\"%d\" smooth=\"%d\" aa=\"%d\" padding=\"%d,%d,%d,%d\" spacing=\"%d,%d\" outline=\"%d\"/>\r\n", fontName.c_str(), fontSize, isBold, isItalic, useUnicode ? "" : GetCharSetName(charSet).c_str(), useUnicode, scaleH, useSmoothing, aa, paddingUp + paddingFromWidth, paddingRight + paddingFromWidth, paddingDown + paddingFromWidth, paddingLeft + paddingFromWidth, spacingHoriz, spacingVert, outlineThickness);
 		fprintf(f, "  <common lineHeight=\"%d\" base=\"%d\" scaleW=\"%d\" scaleH=\"%d\" pages=\"%d\" packed=\"%d\" alphaChnl=\"%d\" redChnl=\"%d\" greenChnl=\"%d\" blueChnl=\"%d\"/>\r\n", int(ceilf(height*float(scaleH)/100.0f)), int(ceilf(base*float(scaleH)/100.0f)), outWidth, outHeight, int(numPages), fourChnlPacked, alphaChnl, redChnl, greenChnl, blueChnl);
 
 		fprintf(f, "  <pages>\r\n");
@@ -1669,7 +2164,7 @@ int CFontGen::SaveFont(const char *szFile)
 	}
 	else if( fontDescFormat == 0 )
 	{
-		fprintf(f, "info face=\"%s\" size=%d bold=%d italic=%d charset=\"%s\" unicode=%d stretchH=%d smooth=%d aa=%d padding=%d,%d,%d,%d spacing=%d,%d outline=%d\r\n", fontName.c_str(), fontSize, isBold, isItalic, useUnicode ? "" : GetCharSetName(charSet).c_str(), useUnicode, scaleH, useSmoothing, aa, paddingUp, paddingRight, paddingDown, paddingLeft, spacingHoriz, spacingVert, outlineThickness);
+		fprintf(f, "info face=\"%s\" size=%d bold=%d italic=%d charset=\"%s\" unicode=%d stretchH=%d smooth=%d aa=%d padding=%d,%d,%d,%d spacing=%d,%d outline=%d\r\n", fontName.c_str(), fontSize, isBold, isItalic, useUnicode ? "" : GetCharSetName(charSet).c_str(), useUnicode, scaleH, useSmoothing, aa, paddingUp + paddingFromWidth, paddingRight + paddingFromWidth, paddingDown + paddingFromWidth, paddingLeft + paddingFromWidth, spacingHoriz, spacingVert, outlineThickness);
 		fprintf(f, "common lineHeight=%d base=%d scaleW=%d scaleH=%d pages=%d packed=%d alphaChnl=%d redChnl=%d greenChnl=%d blueChnl=%d\r\n", int(ceilf(height*float(scaleH)/100.0f)), int(ceilf(base*float(scaleH)/100.0f)), outWidth, outHeight, int(numPages), fourChnlPacked, alphaChnl, redChnl, greenChnl, blueChnl);
 
 		for( size_t n = 0; n < numPages; n++ )
@@ -1679,7 +2174,7 @@ int CFontGen::SaveFont(const char *szFile)
 	{
 		// Write the magic word and file version
 		fwrite("BMF", 3, 1, f);
-		fputc(3, f); 
+		fputc(3, f); // file version
 
 		// Write the info block
 #pragma pack(push)
@@ -1717,15 +2212,15 @@ int CFontGen::SaveFont(const char *szFile)
 		info.charSet      = charSet;
 		info.stretchH     = scaleH;
 		info.aa           = aa;
-		info.paddingUp    = paddingUp;
-		info.paddingRight = paddingRight;
-		info.paddingDown  = paddingDown;
-		info.paddingLeft  = paddingLeft;
+		info.paddingUp    = paddingUp + paddingFromWidth;
+		info.paddingRight = paddingRight + paddingFromWidth;
+		info.paddingDown  = paddingDown + paddingFromWidth;
+		info.paddingLeft  = paddingLeft + paddingFromWidth;
 		info.spacingHoriz = spacingHoriz;
 		info.spacingVert  = spacingVert;
 		info.outline      = outlineThickness;
 
-		fputc(1, f);
+		fputc(1, f); // info type
 		fwrite(&info, sizeof(info)-1, 1, f);
 		fwrite(fontName.c_str(), fontName.length()+1, 1, f);
 
@@ -1762,11 +2257,11 @@ int CFontGen::SaveFont(const char *szFile)
 		common.greenChnl  = greenChnl;
 		common.blueChnl   = blueChnl;
 
-		fputc(2, f);
+		fputc(2, f); // common type
 		fwrite(&common, sizeof(common), 1, f);
 
 		// Write the page block
-		fputc(3, f);
+		fputc(3, f); // page type
 		int size = int((filenameonly.length() + numDigits + 2 + textureFormat.length() + 1)*numPages);
 		fwrite(&size, sizeof(size), 1, f);
 
@@ -1795,7 +2290,7 @@ int CFontGen::SaveFont(const char *szFile)
 		fprintf(f, "  <chars count=\"%d\">\r\n", numChars);
 	else if( fontDescFormat == 2 )
 	{
-		fputc(4, f);
+		fputc(4, f); // chars type
 
 		// Determine the size of this block
 		int size = (4+2+2+2+2+2+2+2+1+1)*numChars;
@@ -1844,7 +2339,7 @@ int CFontGen::SaveFont(const char *szFile)
 
 	for( n = 0; n < maxChars; n++ )
 	{
-        if( chars[n] )
+		if( chars[n] )
 		{
 			int page, chnl;
 			page = chars[n]->m_page;
@@ -2011,7 +2506,7 @@ int CFontGen::SaveFont(const char *szFile)
 				fprintf(f, "  <kernings count=\"%d\">\r\n", (int)pairs.size());
 			else if( fontDescFormat == 2 )
 			{
-				fputc(5, f);
+				fputc(5, f); // kernings type
 
 				// Determine the size of the block
 				int size = (int)pairs.size()*10;
@@ -2160,6 +2655,9 @@ int CFontGen::SaveConfiguration(const char *szFile)
 	fprintf(f, "useHinting=%d\n", useHinting);
 	fprintf(f, "renderFromOutline=%d\n", renderFromOutline);
 	fprintf(f, "useClearType=%d\n", useClearType);
+	fprintf(f, "autoFitNumPages=%d\n", autoFitNumPages);
+	fprintf(f, "autoFitFontSizeMin=%d\n", autoFitFontSizeMin);
+	fprintf(f, "autoFitFontSizeMax=%d\n", autoFitFontSizeMax);
 
 	fprintf(f, "\n# character alignment\n");
 	fprintf(f, "paddingDown=%d\n", paddingDown);
@@ -2170,6 +2668,7 @@ int CFontGen::SaveConfiguration(const char *szFile)
 	fprintf(f, "spacingVert=%d\n", spacingVert);
 	fprintf(f, "useFixedHeight=%d\n", fixedHeight);
 	fprintf(f, "forceZero=%d\n", forceZero);
+	fprintf(f, "widthPaddingFactor=%0.2f\n", widthPaddingFactor);
 
 	fprintf(f, "\n# output file\n");
 	fprintf(f, "outWidth=%d\n", outWidth);
@@ -2281,6 +2780,9 @@ int CFontGen::LoadConfiguration(const char *filename)
 	bool   _useHinting;             config.GetAttrAsBool("useHinting", _useHinting, 0, true);
 	bool   _renderFromOutline;      config.GetAttrAsBool("renderFromOutline", _renderFromOutline, 0, false);
 	bool   _useClearType;           config.GetAttrAsBool("useClearType", _useClearType, 0, true);
+	int    _autoFitNumPages;        config.GetAttrAsInt("autoFitNumPages", _autoFitNumPages, 0, 0);
+	int    _autoFitFontSizeMin;     config.GetAttrAsInt("autoFitFontSizeMin", _autoFitFontSizeMin, 0, 0);
+	int    _autoFitFontSizeMax;     config.GetAttrAsInt("autoFitFontSizeMax", _autoFitFontSizeMax, 0, 0);
 	int    _paddingDown;            config.GetAttrAsInt("paddingDown", _paddingDown, 0, 0);
 	int    _paddingUp;              config.GetAttrAsInt("paddingUp", _paddingUp, 0, 0);
 	int    _paddingRight;           config.GetAttrAsInt("paddingRight", _paddingRight, 0, 0);
@@ -2307,6 +2809,7 @@ int CFontGen::LoadConfiguration(const char *filename)
 	bool   _invR;                   config.GetAttrAsBool("invR", _invR, 0, false);
 	bool   _invG;                   config.GetAttrAsBool("invG", _invG, 0, false);
 	bool   _invB;                   config.GetAttrAsBool("invB", _invB, 0, false);
+	float  _widthPaddingFactor;     config.GetAttrAsFloat("widthPaddingFactor", _widthPaddingFactor, 0, 0.0f);
 
 	static bool _selected[maxUnicodeChar+1];
 	memset(_selected, 0, sizeof(_selected));
@@ -2429,6 +2932,9 @@ int CFontGen::LoadConfiguration(const char *filename)
 	SetBold(_isBold);
 	SetItalic(_isItalic);
 	SetUseUnicode(_useUnicode);
+	SetAutoFitNumPages(_autoFitNumPages);
+	SetAutoFitFontSizeMin(_autoFitFontSizeMin);
+	SetAutoFitFontSizeMax(_autoFitFontSizeMax);
 	SetPaddingDown(_paddingDown);
 	SetPaddingUp(_paddingUp);
 	SetPaddingRight(_paddingRight);
@@ -2437,6 +2943,7 @@ int CFontGen::LoadConfiguration(const char *filename)
 	SetSpacingVert(_spacingVert);
 	SetFixedHeight(_fixedHeight);
 	SetForceZero(_forceZero);
+	SetWidthPaddingFactor(_widthPaddingFactor);
 	SetOutWidth(_outWidth);
 	SetOutHeight(_outHeight);
 	SetOutBitDepth(_outBitDepth);
