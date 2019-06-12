@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2018 Andreas Jonsson
+   Copyright (c) 2004-2019 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -1078,7 +1078,10 @@ void CCharWin::VisualizeAfterFinishedGenerating()
 		if( countFailed )
 		{
 			stringstream s;
-			s << countFailed << " characters did not fit the textures.";
+			if (fontGen->GetAutoFitNumPages() > 0)
+				s << countFailed << " characters did not fit within " << fontGen->GetAutoFitNumPages() << " pages.";
+			else
+				s << countFailed << " characters did not fit the textures.";
 
 			TCHAR buf[1024];
 			ConvertUtf8ToTChar(s.str(), buf, 1024);
@@ -1115,7 +1118,10 @@ void CCharWin::SaveFontAfterFinishedGenerating()
 	if( countFailed )
 	{
 		stringstream s;
-		s << countFailed << " characters did not fit the textures.";
+		if (fontGen->GetAutoFitNumPages() > 0)
+			s << countFailed << " characters did not fit within " << fontGen->GetAutoFitNumPages() << " pages.";
+		else
+			s << countFailed << " characters did not fit the textures.";
 
 		TCHAR buf[1024];
 		ConvertUtf8ToTChar(s.str(), buf, 1024);
