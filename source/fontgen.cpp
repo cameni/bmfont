@@ -1429,7 +1429,7 @@ public:
 				latestGoodFontSize = autoFitFontSizeMin;
 				latestBadFontSize = autoFitFontSizeMax;
 				newFontSize = (latestBadFontSize + latestGoodFontSize) / 2;
-				assert( FBinarySearchReady() );
+				assert( BinarySearchReady() );
 
 #ifdef TRACE_GENERATE
 				trace << "state = e_search_in" << endl;
@@ -1590,7 +1590,7 @@ public:
 						latestBadFontSize = newFontSize;
 					}
 
-					assert( FBinarySearchReady() );
+					assert( BinarySearchReady() );
 				}
 			}
 
