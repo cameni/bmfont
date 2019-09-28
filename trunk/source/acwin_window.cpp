@@ -1,6 +1,6 @@
 /*
    AngelCode Tool Box Library
-   Copyright (c) 2004-2016 Andreas Jonsson
+   Copyright (c) 2004-2019 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -25,6 +25,7 @@
    andreas@angelcode.com
 */
 
+// 2019-09-26  Fixed a bug in ConvertUtf8ToTChar to handle multiple strings separated by double null
 // 2016-02-21  Fixes for Win64
 // 2014-06-17  Removed dependency on Windows.h in header
 // 2014-06-16  Prepared the code to work for both unicode and multibyte applications
@@ -524,7 +525,7 @@ void ConvertTCharToUtf8(const TCHAR *buf, std::string &utf8)
 void ConvertUtf8ToTChar(const std::string &utf8, TCHAR *buf, size_t bufSize)
 {
 #ifdef _UNICODE
-	MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, buf, int(bufSize));
+	MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), buf, int(bufSize));
 #else
 	strcpy_s(buf, bufSize, utf8.c_str());
 #endif
