@@ -20,7 +20,7 @@ The program and any possible upgrades can be found at www.AngelCode.com. The aut
 
 Changes
 -------------------------------
-1.14 beta - 2017/05/28
+1.14 beta - 2019/10/30
 - Fixed crash with large fonts when Windows API incorrectly reported negative width for glyphs.
 - Improved handling of out-of-memory conditions.
 - Fixed crash that could occur when exporting Unicode characters above 0x10000 with kerning pairs.
@@ -42,6 +42,8 @@ Changes
 - The default glyph for invalid characters is now properly rasterized when not rendered from outline too.
 - The status bar now shows the glyph id for the characters.
 - Fixed corrupt glyphs when rendering very large fonts (1000+ px) from glyph outline.
+- Added autofit that automatically determines the max font size that fits in defined texture size (only available through commandline interface so far)
+- Fixed crash on startup if default font doesn't have the unicode chars in range 0-255.
 
 1.13 - 2012/08/12
 - Added option to export fonts using fixed cell heights for easier post processing.
