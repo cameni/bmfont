@@ -126,8 +126,11 @@ int CCharWin::GetCharFromPos(int posX, int posY)
 
 	if( fontGen->IsUsingUnicode() )
 	{
-		ch = fontGen->GetUnicodeSubset(unicodeSubset)->charBegin + y*16 + x;
-		if( ch > fontGen->GetUnicodeSubset(unicodeSubset)->charEnd )
+		const SSubset *set = fontGen->GetUnicodeSubset(unicodeSubset);
+		if (set == 0)
+			return -1;
+		ch = set->charBegin + y*16 + x;
+		if( ch > set->charEnd )
 			return -1;
 	}
 	else
@@ -200,8 +203,11 @@ void CCharWin::UpdateStatus()
 		statusBar->SetStatusText(str.c_str());
 
 		// Display the current charset
-		if( fontGen->IsUsingUnicode() )
-			str = fontGen->GetUnicodeSubset(unicodeSubset)->name;
+		if (fontGen->IsUsingUnicode())
+		{
+			const SSubset *set = fontGen->GetUnicodeSubset(unicodeSubset);
+			str = set ? set->name : "";
+		}
 		else
 			str = "ASCII";
 		statusBar->SetStatusText(str.c_str(), 1, 0);
@@ -307,7 +313,7 @@ void CCharWin::PrepareView()
 				for( lastInLV++; lastInLV < (signed)numSets; lastInLV++ )
 				{
 					const SSubset *set = fontGen->GetUnicodeSubset(lastInLV);
-					if( set->available )
+					if( set && set->available )
 					{
 						string name = acStringFormat("%0.6X  %s", set->charBegin, set->name.c_str());
 						listView->InsertItem(numSets, name.c_str(), lastInLV);
@@ -326,7 +332,7 @@ void CCharWin::PrepareView()
 				for( lastInLV++; lastInLV < subset; lastInLV++ )
 				{
 					const SSubset *set = fontGen->GetUnicodeSubset(lastInLV);
-					if( set->available )
+					if( set && set->available )
 					{
 						string name = acStringFormat("%0.6X  %s", set->charBegin, set->name.c_str());
 						listView->InsertItem(lvi++, name.c_str(), lastInLV);
@@ -334,7 +340,8 @@ void CCharWin::PrepareView()
 				}
 
 				// Should the current item be removed?
-				if( !fontGen->GetUnicodeSubset((unsigned int)subset)->available )
+				const SSubset *set = fontGen->GetUnicodeSubset((unsigned int)subset);
+				if( !set || !set->available )
 					listView->DeleteItem(lvi--);
 			}
 		}
@@ -414,8 +421,16 @@ void CCharWin::DrawGlyphs(HDC dc, RECT &rc, TEXTMETRIC &tm)
 	if (fontGen->IsUsingUnicode())
 	{
 		const SSubset *subset = fontGen->GetUnicodeSubset(unicodeSubset);
-		offset = subset->charBegin;
-		charEnd = subset->charEnd;
+		if (subset)
+		{
+			offset = subset->charBegin;
+			charEnd = subset->charEnd;
+		}
+		else
+		{
+			offset = 0;
+			charEnd = -1;
+		}
 	}
 
 	SCRIPT_CACHE sc = 0;
@@ -782,15 +797,19 @@ LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 		case ID_EDIT_FINDNEXTFAILEDCHAR:
 			{
 				unicodeSubset = fontGen->FindNextFailedCharacterSubset(unicodeSubset);
-				int li = listView->FindItem(-1, fontGen->GetUnicodeSubset(unicodeSubset)->name.c_str());
-				SetFocus(listView->GetHandle());
-				listView->SetItemState(-1, LVIS_FOCUSED|LVIS_SELECTED, 0);
-				if( li >= 0 )
+				const SSubset *set = fontGen->GetUnicodeSubset(unicodeSubset);
+				if (set)
 				{
-					listView->SetItemState(li, LVIS_FOCUSED|LVIS_SELECTED, LVIS_FOCUSED|LVIS_SELECTED);
-					listView->EnsureVisible(li);
+					int li = listView->FindItem(-1, set->name.c_str());
+					SetFocus(listView->GetHandle());
+					listView->SetItemState(-1, LVIS_FOCUSED | LVIS_SELECTED, 0);
+					if (li >= 0)
+					{
+						listView->SetItemState(li, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+						listView->EnsureVisible(li);
+					}
+					Invalidate(FALSE);
 				}
-				Invalidate(FALSE);
 			}
 			return 0;
 
