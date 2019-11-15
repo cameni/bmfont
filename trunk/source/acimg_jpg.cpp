@@ -1,6 +1,6 @@
 /*
    AngelCode Tool Box Library
-   Copyright (c) 2007-2016 Andreas Jonsson
+   Copyright (c) 2007-2019 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -25,6 +25,7 @@
    andreas@angelcode.com
 */
 
+// 2019-11-15: Added support for paths with unicode chars
 // 2016-02-21: Using fopen_s to please MSVC
 // 2012-04-02: Added support for CMYK when loading JPG
 
@@ -33,6 +34,7 @@
 #include <setjmp.h>
 #include <jpeglib.h>
 #include "acimg.h"
+#include "acwin_window.h"
 
 namespace acImage
 {
@@ -65,7 +67,9 @@ int SaveJpg(const char *filename, Image &image, DWORD flags)
 	}
 
 	FILE *f = 0;
-	fopen_s(&f, filename, "wb");
+	wchar_t buf[1024];
+	acWindow::ConvertUtf8ToTChar(filename, buf, 1024);
+	_wfopen_s(&f, buf, L"wb");
 	if( f == 0 )
 		return E_FILE_ERROR;
 
@@ -153,7 +157,9 @@ int LoadJpg(const char *filename, Image &image)
 
 	// Open the file
 	FILE *f = 0;
-	fopen_s(&f, filename, "rb");
+	wchar_t buf[1024];
+	acWindow::ConvertUtf8ToTChar(filename, buf, 1024);
+	_wfopen_s(&f, buf, L"rb");
 	if( f == 0 ) 
 		return E_FILE_ERROR;
 

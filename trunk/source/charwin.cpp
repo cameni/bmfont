@@ -1131,7 +1131,17 @@ void CCharWin::OnVisualize()
 void CCharWin::SaveFontAfterFinishedGenerating()
 {
 	// Save the generated font
-	fontGen->SaveFont(saveFontName.c_str());
+	int r = fontGen->SaveFont(saveFontName.c_str());
+	if (r < 0)
+	{
+		stringstream s;
+		s << "Failed do save font '" << saveFontName << "'.";
+
+		TCHAR buf[1024];
+		ConvertUtf8ToTChar(s.str(), buf, 1024);
+
+		MessageBox(hWnd, buf, __TEXT("Error"), MB_OK);
+	}
 
 	int countFailed = fontGen->GetNumFailedChars();
 	if( countFailed )
