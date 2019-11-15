@@ -1,6 +1,6 @@
 /*
    AngelCode Tool Box Library
-   Copyright (c) 2008-2015 Andreas Jonsson
+   Copyright (c) 2008-2019 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -25,6 +25,7 @@
    andreas@angelcode.com
 */
 
+// 2019-11-15 Added support for paths with unicode chars
 // 2014-06-14 Changed LoadConfigFile to take std::string instead of char*
 // 2011-08-11 Added GetNumberOfAttributes and GetNameOfAttribute
 // 2009-08-07 GetAttrAsInt now reads numbers prefixed by h as hexadecimal numbers
@@ -35,6 +36,7 @@
 
 #include "acutil_config.h"
 #include "acutil_log.h"
+#include "acwin_window.h"
 
 using namespace std;
 
@@ -56,7 +58,9 @@ int CConfig::LoadConfigFile(const string &file)
 {
 #if defined(_MSC_VER) && _MSC_VER >= 1500
 	FILE *f;
-	fopen_s(&f, file.c_str(), "rb"); 
+	wchar_t buf[1024];
+	acWindow::ConvertUtf8ToTChar(file, buf, 1024);
+	_wfopen_s(&f, buf, L"rb"); 
 #else
 	FILE *f = fopen(file.c_str(), "rb");
 #endif

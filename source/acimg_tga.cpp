@@ -1,6 +1,6 @@
 /*
    AngelCode Tool Box Library
-   Copyright (c) 2007-2011 Andreas Jonsson
+   Copyright (c) 2007-2019 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -25,12 +25,14 @@
    andreas@angelcode.com
 */
 
+// 2019-11-15 - Added support for paths with unicode chars
 // 2011-06-05 - Added support for loading colormapped TGA's
 // 2011-04-08 - Fixed bug with loading RLE encoded TGA's
 
 #include <stdio.h>
 #include <string.h>
 #include "acimg.h"
+#include "acwin_window.h"
 
 namespace acImage
 {
@@ -73,7 +75,9 @@ int SaveTga(const char *filename, Image &image, DWORD flags)
 
 #if defined(_MSC_VER) && _MSC_VER >= 1500
 	FILE *f = 0;
-	fopen_s(&f, filename, "wb");
+	wchar_t buf[1024];
+	acWindow::ConvertUtf8ToTChar(filename, buf, 1024);
+	_wfopen_s(&f, buf, L"wb");
 #else
 	FILE *f = fopen(filename, "wb");
 #endif
@@ -346,7 +350,9 @@ int LoadTga(const char *filename, Image &image)
 	// Open the file
 #if defined(_MSC_VER) && _MSC_VER >= 1500
 	FILE *f = 0;
-	fopen_s(&f, filename, "rb");
+	wchar_t buf[1024];
+	acWindow::ConvertUtf8ToTChar(filename, buf, 1024);
+	_wfopen_s(&f, buf, L"rb");
 #else
 	FILE *f = fopen(filename, "rb");
 #endif

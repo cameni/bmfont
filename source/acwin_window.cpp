@@ -511,6 +511,7 @@ void CWindow::HideSystemMenuButton()
 
 // Helpers for converting strings between UTF8 and Windows' TCHAR
 // These are prepared for both when the application is built for multibyte and when built for unicode
+// TODO: Move to acutil_unicode.cpp
 void ConvertTCharToUtf8(const TCHAR *buf, std::string &utf8)
 {
 #ifdef _UNICODE
@@ -522,6 +523,7 @@ void ConvertTCharToUtf8(const TCHAR *buf, std::string &utf8)
 #endif
 }
 
+// TODO: Move to acutil_unicode.cpp
 void ConvertUtf8ToTChar(const std::string &utf8, TCHAR *buf, size_t bufSize)
 {
 #ifdef _UNICODE

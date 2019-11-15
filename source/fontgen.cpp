@@ -2132,7 +2132,9 @@ int CFontGen::SaveFont(const char *szFile)
 	if( _stricmp(filename.substr(filename.length() - 4).c_str(), ".fnt") == 0 )
 		filename = filename.substr(0, filename.length() - 4);
 
-	errno_t e = fopen_s(&f, (filename + ".fnt").c_str(), "wb");
+	TCHAR buf[1024];
+	ConvertUtf8ToTChar(filename + ".fnt", buf, 1024);
+	errno_t e = _wfopen_s(&f, buf, L"wb");
 	if( e != 0 || f == 0 )
 		return -1;
 
@@ -2624,8 +2626,11 @@ int CFontGen::SaveConfiguration(const char *szFile)
 	if( _stricmp(filename.substr(filename.length() - 5).c_str(), ".bmfc") == 0 )
 		filename = filename.substr(0, filename.length() - 5);
 
+	TCHAR buf[1024];
+	ConvertUtf8ToTChar(filename + ".bmfc", buf, 1024);
+
 	FILE *f = 0;
-	errno_t e  = fopen_s(&f, (filename + ".bmfc").c_str(), "wb");
+	errno_t e  = _wfopen_s(&f, buf, L"wb");
 	if( e != 0 || f == 0 ) return -1;
 	
 	// Keep the name so it can be queried later
@@ -2985,8 +2990,11 @@ int CFontGen::SelectCharsFromFile(const char *filename)
 {
 	if( isWorking ) return -1;
 
+	TCHAR buf[1024];
+	ConvertUtf8ToTChar(filename, buf, 1024);
+
 	FILE *f = 0;
-	errno_t e = fopen_s(&f, filename, "rb");
+	errno_t e = _wfopen_s(&f, buf, L"rb");
 	if( e != 0 || f == 0 ) return -1;
 
 	memset(noFit, 0, sizeof(noFit));
