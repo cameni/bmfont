@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2017 Andreas Jonsson
+   Copyright (c) 2004-2020 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -852,8 +852,37 @@ void ProcessPairAdjustmentFormat1(HDC dc, BYTE *subTable, vector<KERNINGPAIR> &p
 	{
 		WORD rangeCount = GETUSHORT(coverage+2);
 
-		// TODO: Implement this
-		assert( false );
+		for (UINT n = 0; n < rangeCount; n++)
+		{
+			WORD start = GETUSHORT(coverage + 4 + n * 6);
+			WORD end = GETUSHORT(coverage + 6 + n * 6);
+			WORD startCoverageIndex = GETUSHORT(coverage + 8 + n * 6);
+
+			for (UINT g = start; g <= end; g++)
+			{
+				WORD glyphId1 = g;
+				if (glyphIdToChar[glyphId1].size() == 0)
+					continue;
+				
+				// For each of the glyph ids we need to search the 
+				// PairSets for the matching kerning pairs
+				WORD pairSetOffset = GETUSHORT(subTable + 10 + (g-start+startCoverageIndex) * 2);
+				BYTE* pairSet = subTable + pairSetOffset;
+				WORD pairValueCount = GETUSHORT(pairSet);
+				for (UINT p = 0; p < pairValueCount; p++)
+				{
+					BYTE* pairValue = pairSet + 2 + p * (2 + valuePairSize);
+
+					WORD glyphId2 = GETUSHORT(pairValue);
+					short xAdv1 = GetXAdvance(pairValue + 2, valueFormat1);
+
+					if (xAdv1 != 0)
+					{
+						AddKerningPairToList(dc, glyphId1, glyphId2, xAdv1, pairs, scaleFactor, glyphIdToChar);
+					}
+				}
+			}
+		}
 	}
 }
 
