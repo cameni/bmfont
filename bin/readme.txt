@@ -20,7 +20,7 @@ The program and any possible upgrades can be found at www.AngelCode.com. The aut
 
 Changes
 -------------------------------
-1.14 beta - 2019/11/15
+1.14 beta - 2020/09/02
 - Fixed crash with large fonts when Windows API incorrectly reported negative width for glyphs.
 - Improved handling of out-of-memory conditions.
 - Fixed crash that could occur when exporting Unicode characters above 0x10000 with kerning pairs.
@@ -45,6 +45,7 @@ Changes
 - Added autofit that automatically determines the max font size that fits in defined texture size (only available through commandline interface so far)
 - Fixed crash on startup if default font doesn't have the Unicode chars in range 0-255.
 - Added support for file paths with Unicode characters.
+- Improved support for kerning pairs in true type fonts that store them as ranges.
 
 1.13 - 2012/08/12
 - Added option to export fonts using fixed cell heights for easier post processing.
