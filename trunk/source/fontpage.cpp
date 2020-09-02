@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2014 Andreas Jonsson
+   Copyright (c) 2004-2020 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -496,35 +496,35 @@ void CFontPage::AddCharsToPage(CFontChar **chars, int maxChars, bool colored, in
 	SortList(chars, index, numChars);
 
 	// Add the images to the page
-	while( numChars > 0 )
+	while (numChars > 0)
 	{
-		#ifdef TRACE_GENERATE
-			trace << "There are " << numChars << " candidates left, and " << holes.size() << " holes to fill\n";
-			trace.flush();
-		#endif
+#ifdef TRACE_GENERATE
+		trace << "There are " << numChars << " candidates left, and " << holes.size() << " holes to fill\n";
+		trace.flush();
+#endif
 
 		// Fill holes
-		for( int h = 0; h < (signed)holes.size(); h++ )
+		for (int h = 0; h < (signed)holes.size(); h++)
 		{
 			int bestMatch;
 			bestMatch = -1;
 
 			// Find the best matching character to fill the hole
-			for( int n = 0; n < numChars; n++ )
+			for (int n = 0; n < numChars; n++)
 			{
-				if( (holes[h].w == chars[index[n]]->m_charImg->width + paddingLeft + paddingRight) &&
-					(holes[h].h == chars[index[n]]->m_charImg->height + paddingUp + paddingDown) )
+				if ((holes[h].w == chars[index[n]]->m_charImg->width + paddingLeft + paddingRight) &&
+					(holes[h].h == chars[index[n]]->m_charImg->height + paddingUp + paddingDown))
 				{
 					bestMatch = n;
 					break;
 				}
-				else if( (holes[h].w >= chars[index[n]]->m_charImg->width + paddingLeft + paddingRight) &&
-					     (holes[h].h >= chars[index[n]]->m_charImg->height + paddingUp + paddingDown) )
+				else if ((holes[h].w >= chars[index[n]]->m_charImg->width + paddingLeft + paddingRight) &&
+					(holes[h].h >= chars[index[n]]->m_charImg->height + paddingUp + paddingDown))
 				{
-					if( bestMatch != -1 )
+					if (bestMatch != -1)
 					{
-						if( (chars[index[n]]->m_charImg->width > chars[index[bestMatch]]->m_charImg->width) ||
-							(chars[index[n]]->m_charImg->height > chars[index[bestMatch]]->m_charImg->height) )
+						if ((chars[index[n]]->m_charImg->width > chars[index[bestMatch]]->m_charImg->width) ||
+							(chars[index[n]]->m_charImg->height > chars[index[bestMatch]]->m_charImg->height))
 							bestMatch = n;
 					}
 					else
@@ -532,13 +532,13 @@ void CFontPage::AddCharsToPage(CFontChar **chars, int maxChars, bool colored, in
 				}
 			}
 
-			if( bestMatch != -1 )
+			if (bestMatch != -1)
 			{
 				int x = holes[h].x;
 				int y = holes[h].y;
 
 				// There may still be room for more 
-				if( holes[h].w - spacingH > chars[index[bestMatch]]->m_charImg->width + paddingLeft + paddingRight )
+				if (holes[h].w - spacingH > chars[index[bestMatch]]->m_charImg->width + paddingLeft + paddingRight)
 				{
 					// Create a new hole to the right of the newly inserted character, with the same height of the previous hole
 					SHole hole2;
@@ -549,7 +549,7 @@ void CFontPage::AddCharsToPage(CFontChar **chars, int maxChars, bool colored, in
 					hole2.chnl = holes[h].chnl;
 					holes.push_back(hole2);
 				}
-				if( holes[h].h - spacingV > chars[index[bestMatch]]->m_charImg->height + paddingUp + paddingDown )
+				if (holes[h].h - spacingV > chars[index[bestMatch]]->m_charImg->height + paddingUp + paddingDown)
 				{
 					// Create a new hole below the newly inserted character, with the width of the character
 					SHole hole2;
@@ -570,17 +570,17 @@ void CFontPage::AddCharsToPage(CFontChar **chars, int maxChars, bool colored, in
 #endif
 
 				// Check if we should stop
-				if( gen->stopWorking ) return;
+				if (gen->stopWorking) return;
 
 				// Compact the list 
 				numChars--;
-				for( int n = bestMatch; n < numChars; n++ )
-					index[n] = index[n+1];
+				for (int n = bestMatch; n < numChars; n++)
+					index[n] = index[n + 1];
 			}
-			
+
 			// Remove the hole
-			if( h < (signed)holes.size() - 1 )
-				holes[h] = holes[holes.size()-1];
+			if (h < (signed)holes.size() - 1)
+				holes[h] = holes[holes.size() - 1];
 			holes.pop_back();
 			h--;
 		}
@@ -589,6 +589,15 @@ void CFontPage::AddCharsToPage(CFontChar **chars, int maxChars, bool colored, in
 		trace << "All holes have been filled\n";
 		trace.flush();
 #endif
+
+		if (numChars == 0)
+		{
+#ifdef TRACE_GENERATE
+			trace << "There are no more characters\n";
+			trace.flush();
+#endif
+			break;
+		}
 
 		numChars2 = 0;
 		bool allTooWide = true;
