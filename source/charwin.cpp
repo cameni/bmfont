@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2019 Andreas Jonsson
+   Copyright (c) 2004-2020 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -580,10 +580,12 @@ void CCharWin::OnInitMenuPopup(HMENU menu, int pos, BOOL isWindowMenu)
 	else
 		CheckMenuItem(menu, ID_EDIT_OPENIMAGEMANAGER, MF_BYCOMMAND | MF_UNCHECKED);
 
+#if defined(EXPERIMENTAL)
 	if (inspectFont)
 		CheckMenuItem(menu, ID_OPTIONS_INSPECTFONT, MF_BYCOMMAND | MF_CHECKED);
 	else
 		CheckMenuItem(menu, ID_OPTIONS_INSPECTFONT, MF_BYCOMMAND | MF_UNCHECKED);
+#endif
 }
 
 LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -831,6 +833,7 @@ LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 			return 0;
 
+#ifdef EXPERIMENTAL
 		case ID_OPTIONS_INSPECTFONT:
 			if (inspectFont)
 			{
@@ -843,6 +846,7 @@ LRESULT CCharWin::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				inspectFont->Create(this, fontGen);
 			}
 			return 0;
+#endif
 		}
 		break;
 
@@ -970,6 +974,9 @@ void CCharWin::OnChooseFont()
 	dlg.fontFile                = fontGen->GetFontFile();
 	dlg.charSet                 = fontGen->GetCharSet();
 	dlg.fontSize                = fontGen->GetFontSize();
+	dlg.autoFitPages            = fontGen->GetAutoFitNumPages();
+	dlg.autoFitMinSize          = fontGen->GetAutoFitFontSizeMin();
+	dlg.autoFitMaxSize          = fontGen->GetAutoFitFontSizeMax();
 	dlg.isBold                  = fontGen->IsBold();
 	dlg.isItalic                = fontGen->IsItalic();
 	dlg.antiAliasing            = fontGen->GetAntiAliasingLevel();
@@ -993,6 +1000,9 @@ void CCharWin::OnChooseFont()
 		fontGen->SetFontFile(dlg.fontFile);
 		fontGen->SetCharSet(dlg.charSet);
 		fontGen->SetFontSize(dlg.fontSize);
+		fontGen->SetAutoFitNumPages(dlg.autoFitPages);
+		fontGen->SetAutoFitFontSizeMin(dlg.autoFitMinSize);
+		fontGen->SetAutoFitFontSizeMax(dlg.autoFitMaxSize);
 		fontGen->SetBold(dlg.isBold);
 		fontGen->SetItalic(dlg.isItalic);
 		fontGen->SetAntiAliasingLevel(dlg.antiAliasing);
@@ -1030,6 +1040,7 @@ void CCharWin::OnExportOptions()
 	dlg.spacingVert     = fontGen->GetSpacingVert();
 	dlg.fixedHeight     = fontGen->GetFixedHeight();
 	dlg.forceZero       = fontGen->GetForceZero();
+	dlg.adaptivePaddingFactor = fontGen->GetWidthPaddingFactor();
 
 	dlg.width              = fontGen->GetOutWidth();
 	dlg.height             = fontGen->GetOutHeight();
@@ -1058,6 +1069,7 @@ void CCharWin::OnExportOptions()
 		fontGen->SetSpacingVert(dlg.spacingVert);
 		fontGen->SetFixedHeight(dlg.fixedHeight);
 		fontGen->SetForceZero(dlg.forceZero);
+		fontGen->SetWidthPaddingFactor(dlg.adaptivePaddingFactor);
 
 		fontGen->SetOutWidth(dlg.width);
 		fontGen->SetOutHeight(dlg.height);
