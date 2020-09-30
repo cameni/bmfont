@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2019 Andreas Jonsson
+   Copyright (c) 2004-2020 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -1111,7 +1111,6 @@ void CFontGen::ChangeAutoFitFontSize(int fontSize)
 
 	this->fontSize = fontSize;
 
-	memset(disabled, 0, sizeof(disabled));
 	memset(noFit, 0, sizeof(noFit));
 
 	ClearPages();
