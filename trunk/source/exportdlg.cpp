@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2020 Andreas Jonsson
+   Copyright (c) 2004-2021 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -171,6 +171,9 @@ void CExportDlg::EnableWidgets()
 		EnableWindow(GetDlgItem(hWnd, IDC_INV_G), TRUE);
 		EnableWindow(GetDlgItem(hWnd, IDC_INV_B), TRUE);
 	}
+
+	// Enable adaptive padding if autofit pages is > 0
+	EnableWindow(GetDlgItem(hWnd, IDC_ADAPTIVEPADFACTOR), autofitPages > 0);
 }
 
 void CExportDlg::OnInit()

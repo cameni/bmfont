@@ -55,6 +55,14 @@ and xadvance will be equal to the width. This option also forces the equalizatio
 <p>Observe, that this will modify the final spacing between characters if the original TrueType font uses negative 
 xoffsets, or xadvance that is smaller than the glyph width, i.e. if the characters have any overhang.</p>
 
+<h3>Adaptive padding factor</h3>
+
+<p>When using autofit to automatically determine the best font size, the adaptive padding factor can be used to get a 
+padding proportional to the font size determined by autofit. The adaptive padding is calculated as the average 
+character width multiplied with the informed padding factor then adding the standard padding.</p>
+
+<p>When autofit is not used, the adaptive padding factor is not applied.</p>
+
 <h3>Texture</h3>
 
 <p>BMFont supports several different texture layouts. The width and height, of course control
