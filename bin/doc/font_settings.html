@@ -29,6 +29,10 @@ glyph in the TrueType font for a specific character.
 <p>The option to not include kerning pairs is useful when the application that will use the generated 
 bitmap font doesn't support kerning pairs, or when the source TrueType font has incorrect kerning pairs.
 
+<p>When autofit pages is larger than 0, the tool will try to find the largest possible font size that will fit 
+all selected characters within the output texture size. It will try keep the number of pages to the maximum 
+informed while still keeping the font size within the minimum and maximum.
+
 <h2>Rasterizing</h3>
 
 <p>The option to render from TrueType outline was added because the native font engine in Windows clips glyphs that go above or below the cell height. 

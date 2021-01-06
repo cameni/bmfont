@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2020 Andreas Jonsson
+   Copyright (c) 2004-2021 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -103,6 +103,7 @@ LRESULT CChooseFont::MsgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 		case IDC_USEOEM:
 		case IDC_RENDERFROMOUTLINE:
 		case IDC_SMOOTH:
+		case IDC_AUTOFITPAGES:
 			EnableWidgets();
 			break;
 		}
@@ -126,7 +127,15 @@ void CChooseFont::EnableWidgets()
 	// Clear type is only available when using font smoothing and native renderer
 	EnableWindow(GetDlgItem(hWnd, IDC_CLEARTYPE), !IsDlgButtonChecked(hWnd, IDC_RENDERFROMOUTLINE) && IsDlgButtonChecked(hWnd, IDC_SMOOTH));
 
-	// TODO: Disable font size if autofit pages is different from 0
+	// Disable font size if autofit pages is different from 0
+	EnableWindow(GetDlgItem(hWnd, IDC_FONTSIZE), GetDlgItemInt(hWnd, IDC_AUTOFITPAGES, 0, FALSE) == 0);
+	EnableWindow(GetDlgItem(hWnd, IDC_MATCHCHARHEIGHT), GetDlgItemInt(hWnd, IDC_AUTOFITPAGES, 0, FALSE) == 0);
+
+	// Disable autofit min and max if autofit pages is 0
+	EnableWindow(GetDlgItem(hWnd, IDC_MINSIZE), GetDlgItemInt(hWnd, IDC_AUTOFITPAGES, 0, FALSE) > 0);
+	EnableWindow(GetDlgItem(hWnd, IDC_MINSIZESPIN), GetDlgItemInt(hWnd, IDC_AUTOFITPAGES, 0, FALSE) > 0);
+	EnableWindow(GetDlgItem(hWnd, IDC_MAXSIZE), GetDlgItemInt(hWnd, IDC_AUTOFITPAGES, 0, FALSE) > 0);
+	EnableWindow(GetDlgItem(hWnd, IDC_MAXSIZESPIN), GetDlgItemInt(hWnd, IDC_AUTOFITPAGES, 0, FALSE) > 0);
 }
 
 void CChooseFont::OnFontChange()
