@@ -1,6 +1,6 @@
 /*
    AngelCode Bitmap Font Generator
-   Copyright (c) 2004-2020 Andreas Jonsson
+   Copyright (c) 2004-2021 Andreas Jonsson
   
    This software is provided 'as-is', without any express or implied 
    warranty. In no event will the authors be held liable for any 
@@ -2035,7 +2035,9 @@ void CFontGen::InternalGeneratePages()
 
 			for( int n = 0; n < numChars; n++ )
 			{
-				if( ch[n] == 0 )
+				// Avoid to access the noFit array with a negative value
+				// It could appen if the not fitting character is the invalid glyph (m_id == -1)
+				if( ch[n] == 0 || ch[n]->m_id == -1 )
 					continue;
 
 				noFit[ch[n]->m_id] = true;
