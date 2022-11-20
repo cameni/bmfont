@@ -1,28 +1,30 @@
 /*
    AngelCode Bitmap Font Generator
    Copyright (c) 2004-2021 Andreas Jonsson
-  
-   This software is provided 'as-is', without any express or implied 
-   warranty. In no event will the authors be held liable for any 
+
+   This software is provided 'as-is', without any express or implied
+   warranty. In no event will the authors be held liable for any
    damages arising from the use of this software.
 
-   Permission is granted to anyone to use this software for any 
-   purpose, including commercial applications, and to alter it and 
+   Permission is granted to anyone to use this software for any
+   purpose, including commercial applications, and to alter it and
    redistribute it freely, subject to the following restrictions:
 
-   1. The origin of this software must not be misrepresented; you 
+   1. The origin of this software must not be misrepresented; you
       must not claim that you wrote the original software. If you use
-      this software in a product, an acknowledgment in the product 
+      this software in a product, an acknowledgment in the product
       documentation would be appreciated but is not required.
 
-   2. Altered source versions must be plainly marked as such, and 
+   2. Altered source versions must be plainly marked as such, and
       must not be misrepresented as being the original software.
 
-   3. This notice may not be removed or altered from any source 
+   3. This notice may not be removed or altered from any source
       distribution.
-  
+
    Andreas Jonsson
    andreas@angelcode.com
+
+   Altered by @cameni: support for font data in C format
 */
 
 #include <Windows.h>
@@ -146,7 +148,7 @@ void CExportDlg::EnableWidgets()
 	// Pack chars in multiple channels
 	if( IsDlgButtonChecked(hWnd, IDC_BIT8) )
         EnableWindow(GetDlgItem(hWnd, IDC_4CHNLPACK), FALSE);
-	else 
+	else
 		EnableWindow(GetDlgItem(hWnd, IDC_4CHNLPACK), TRUE);
 
 	if( IsDlgButtonChecked(hWnd, IDC_BIT8) || IsDlgButtonChecked(hWnd, IDC_4CHNLPACK) )
@@ -252,6 +254,7 @@ void CExportDlg::OnInit()
 	CheckDlgButton(hWnd, IDC_DESC_TEXT, fontDescFormat == 0 ? BST_CHECKED : BST_UNCHECKED);
 	CheckDlgButton(hWnd, IDC_DESC_XML,  fontDescFormat == 1 ? BST_CHECKED : BST_UNCHECKED);
 	CheckDlgButton(hWnd, IDC_DESC_BIN,  fontDescFormat == 2 ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(hWnd, IDC_DESC_CTEXT, fontDescFormat == 3 ? BST_CHECKED : BST_UNCHECKED);
 
 	// Fill in the texture file format combo
 	SendDlgItemMessage(hWnd, IDC_TEXTURE_FMT, CB_ADDSTRING, 0, (LPARAM)__TEXT("dds - DirectDraw Surface"));
@@ -279,7 +282,7 @@ void CExportDlg::OnInit()
 void CExportDlg::OnPresetChange()
 {
 	int idx = (int)SendDlgItemMessage(hWnd, IDC_PRESETS, CB_GETCURSEL, 0, 0);
-	if( idx == 0 ) // Custom 
+	if( idx == 0 ) // Custom
 		return;
 
 	SendDlgItemMessage(hWnd, IDC_ALPHA, CB_SETCURSEL, presets[idx].alpha, 0);
@@ -354,15 +357,16 @@ void CExportDlg::GetOptions()
 	width = GetDlgItemInt(hWnd, IDC_WIDTH, 0, FALSE);
 	height = GetDlgItemInt(hWnd, IDC_HEIGHT, 0, FALSE);
 
-	if( IsDlgButtonChecked(hWnd, IDC_BIT8) ) 
-		bitDepth = 8; 
-	else 
+	if( IsDlgButtonChecked(hWnd, IDC_BIT8) )
+		bitDepth = 8;
+	else
 		bitDepth = 32;
 	fourChnlPacked = IsDlgButtonChecked(hWnd, IDC_4CHNLPACK) ? true : false;
 
 	if( IsDlgButtonChecked(hWnd, IDC_DESC_TEXT) ) fontDescFormat = 0;
 	if( IsDlgButtonChecked(hWnd, IDC_DESC_XML)  ) fontDescFormat = 1;
 	if( IsDlgButtonChecked(hWnd, IDC_DESC_BIN)  ) fontDescFormat = 2;
+	if( IsDlgButtonChecked(hWnd, IDC_DESC_CTEXT)) fontDescFormat = 3;
 
 	// Get the file extension from combo box
 	GetDlgItemText(hWnd, IDC_TEXTURE_FMT, buf, 256);

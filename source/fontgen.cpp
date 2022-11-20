@@ -1,28 +1,30 @@
 /*
    AngelCode Bitmap Font Generator
    Copyright (c) 2004-2021 Andreas Jonsson
-  
-   This software is provided 'as-is', without any express or implied 
-   warranty. In no event will the authors be held liable for any 
+
+   This software is provided 'as-is', without any express or implied
+   warranty. In no event will the authors be held liable for any
    damages arising from the use of this software.
 
-   Permission is granted to anyone to use this software for any 
-   purpose, including commercial applications, and to alter it and 
+   Permission is granted to anyone to use this software for any
+   purpose, including commercial applications, and to alter it and
    redistribute it freely, subject to the following restrictions:
 
-   1. The origin of this software must not be misrepresented; you 
+   1. The origin of this software must not be misrepresented; you
       must not claim that you wrote the original software. If you use
-      this software in a product, an acknowledgment in the product 
+      this software in a product, an acknowledgment in the product
       documentation would be appreciated but is not required.
 
-   2. Altered source versions must be plainly marked as such, and 
+   2. Altered source versions must be plainly marked as such, and
       must not be misrepresented as being the original software.
 
-   3. This notice may not be removed or altered from any source 
+   3. This notice may not be removed or altered from any source
       distribution.
-  
+
    Andreas Jonsson
    andreas@angelcode.com
+
+   Altered by @cameni: support for font data in C format
 */
 
 #include <process.h>
@@ -32,6 +34,7 @@
 #include <math.h>
 #include <Usp10.h>
 #include <fstream>
+#include <algorithm>
 
 #include "acutil_config.h"
 #include "dynamic_funcs.h"
@@ -402,7 +405,7 @@ int CFontGen::ClearAll()
 {
 	if( isWorking ) return -1;
 	arePagesGenerated = false;
-	
+
 	memset(selected, 0, (maxUnicodeChar+1)*sizeof(bool));
 	numCharsSelected = 0;
 
@@ -644,7 +647,7 @@ int CFontGen::SetAlphaInverted(bool set)
 	arePagesGenerated = false;
 
 	invA = set;
-	return 0;	
+	return 0;
 }
 
 int CFontGen::SetRedInverted(bool set)
@@ -653,7 +656,7 @@ int CFontGen::SetRedInverted(bool set)
 	arePagesGenerated = false;
 
 	invR = set;
-	return 0;	
+	return 0;
 }
 
 int CFontGen::SetGreenInverted(bool set)
@@ -662,7 +665,7 @@ int CFontGen::SetGreenInverted(bool set)
 	arePagesGenerated = false;
 
 	invG = set;
-	return 0;	
+	return 0;
 }
 
 int CFontGen::SetBlueInverted(bool set)
@@ -671,7 +674,7 @@ int CFontGen::SetBlueInverted(bool set)
 	arePagesGenerated = false;
 
 	invB = set;
-	return 0;	
+	return 0;
 }
 
 int CFontGen::SetScaleHeight(int scale)
@@ -902,7 +905,7 @@ int CFontGen::SetFontFile(const string &file)
 			RemoveFontResourceEx(buf, FR_PRIVATE, 0);
 		}
 
-		// Add the new font so it can be used to draw text with 
+		// Add the new font so it can be used to draw text with
 		TCHAR buf[1024];
 		ConvertUtf8ToTChar(file, buf, 1024);
 		AddFontResourceEx(buf, FR_PRIVATE, 0);
@@ -1197,7 +1200,7 @@ void CFontGen::DetermineExistingChars()
 							// Count the number of available characters
 							// and update the number of selected ones
 							numCharsAvailable++;
-							if( selected[n] ) 
+							if( selected[n] )
 								numCharsSelected++;
 						}
 					}
@@ -1236,7 +1239,7 @@ void CFontGen::DetermineExistingChars()
 				else
 				{
 					numCharsAvailable++;
-					if( selected[n] ) 
+					if( selected[n] )
 						numCharsSelected++;
 				}
 			}
@@ -1556,11 +1559,11 @@ public:
 				newFontSize = FontSizeComplete();
 				break;
 			}
-						
+
 			if (!BinarySearchReady())
 			{
 				currentFontSizeDelta *= 2;
-							
+
 #ifdef TRACE_GENERATE
 				trace << "new fontSizeDelta:" << currentFontSizeDelta << endl;
 				trace.flush();
@@ -1568,7 +1571,7 @@ public:
 				newFontSize = fontGen->GetFontSize() + currentFontSizeDelta;
 				newFontSize = min(newFontSize, autoFitFontSizeMax);
 				newFontSize = max(newFontSize, autoFitFontSizeMin);
-													
+
 				if (newFontSize == fontGen->GetFontSize())
 				{
 					// we've reached the edge of our range. binary search within that edge
@@ -1771,7 +1774,7 @@ void CFontGen::InternalGeneratePages()
 
 		if( chars[ch]->m_height > 0 && chars[ch]->m_width > 0 )
 		{
-			if( (chars[ch]->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert || 
+			if( (chars[ch]->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert ||
 				(chars[ch]->m_width + paddingRight + paddingLeft + 2 * paddingFromWidth) > outWidth-spacingHoriz )
 			{
 				didNotFit = true;
@@ -1841,11 +1844,11 @@ void CFontGen::InternalGeneratePages()
 
 					if( chars[n] && chars[n]->m_height > 0 && chars[n]->m_width > 0 )
 					{
-						if( (chars[n]->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert || 
+						if( (chars[n]->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert ||
 							(chars[n]->m_width + paddingRight + paddingLeft + 2 * paddingFromWidth) > outWidth-spacingHoriz )
 						{
 							didNotFit = true;
-							noFit[n] = true;	
+							noFit[n] = true;
 
 							// Delete the character again so that it isn't considered again
 							delete chars[n];
@@ -1916,7 +1919,7 @@ void CFontGen::InternalGeneratePages()
 #endif
 
 			if( invalidCharGlyph &&
-				(invalidCharGlyph->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert || 
+				(invalidCharGlyph->m_height + paddingUp + paddingDown + 2 * paddingFromWidth) > outHeight-spacingVert ||
 				(invalidCharGlyph->m_width + paddingRight + paddingLeft + 2 * paddingFromWidth) > outWidth-spacingHoriz )
 			{
 				didNotFit = true;
@@ -2096,11 +2099,27 @@ int CFontGen::GeneratePages(bool async)
 	memset(noFit, 0, sizeof(noFit));
 
 	if( async )
-		_beginthread((void (*)(void*))GenerateThread, 0, this);	
+		_beginthread((void (*)(void*))GenerateThread, 0, this);
 	else
 		InternalGeneratePages();
 
 	return 0;
+}
+
+static int write_hex(FILE* f, uint8_t v, int counter)
+{
+	if (counter-- <= 0) {
+		fputs("\"\n\"", f);
+		counter = 32;
+	}
+
+	static char buf[5] = "\\x00";
+	static const char* code = "0123456789abcdef";
+
+	buf[2] = code[v >> 4];
+	buf[3] = code[v & 15];
+	fputs(buf, f);
+	return counter;
 }
 
 int CFontGen::SaveFont(const char *szFile)
@@ -2126,6 +2145,20 @@ int CFontGen::SaveFont(const char *szFile)
 	height = (int)ceil(float(tm.tmHeight)/aa);
 	base = (int)ceil(float(tm.tmAscent)/aa);
 
+
+	const int maxChars = useUnicode ? maxUnicodeChar + 1 : 256;
+
+	// Count the number of characters that will be written
+	int numChars = 0;
+	int n;
+	for (n = 0; n < maxChars; n++)
+		if (chars[n])
+			numChars++;
+
+	if (invalidCharGlyph)
+		numChars++;
+
+
 	// Save the character attributes
 	FILE *f;
 
@@ -2146,14 +2179,14 @@ int CFontGen::SaveFont(const char *szFile)
 		filenameonly = filename.substr(r+1);
 	else
 		filenameonly = filename;
-		
+
 	if( outBitDepth != 32 ) fourChnlPacked = false;
 	size_t numPages = pages.size();
 
 	// Determine the number of digits needed for the page file id
 	int numDigits = numPages > 1 ? int(log10(float(numPages-1))+1) : 1;
 
-	if( fontDescFormat == 1 ) 
+	if( fontDescFormat == 1 )
 	{
 		fprintf(f, "<?xml version=\"1.0\"?>\r\n");
 		fprintf(f, "<font>\r\n");
@@ -2172,6 +2205,36 @@ int CFontGen::SaveFont(const char *szFile)
 
 		for( size_t n = 0; n < numPages; n++ )
 			fprintf(f, "page id=%d file=\"%s_%0*d.%s\"\r\n", (int)n, filenameonly.c_str(), numDigits, (int)n, textureFormat.c_str());
+	}
+	else if (fontDescFormat == 3)
+	{
+		std::string fntcname = fontName;
+		std::replace(fntcname.begin(), fntcname.end(), ' ', '_');
+
+		fprintf(f, "struct font font_%s%d%c%c = {\n", fntcname.c_str(), fontSize, IsBold() ? 'b' : ' ', IsItalic() ? 'i' : ' ');
+		fprintf(f, ".info = {\n\t.face = \"%s\",\n\t.size = %d,\n\t.bold = %d,\n\t.italic = %d,\n\t.charset = \"%s\",\n\t.unicode = %d,\n\t.stretchH = %d,\n\t.smooth = %d,\n\t.aa = %d,\n\t.padding = {%d, %d, %d, %d},\n\t.spacing = {%d, %d},\n\t.outline = %d\n},\n\n", fontName.c_str(), fontSize, isBold, isItalic, useUnicode ? "" : GetCharSetName(charSet).c_str(), useUnicode, scaleH, useSmoothing, aa, paddingUp + paddingFromWidth, paddingRight + paddingFromWidth, paddingDown + paddingFromWidth, paddingLeft + paddingFromWidth, spacingHoriz, spacingVert, outlineThickness);
+		fprintf(f, ".common = {\n\t.lineHeight = %d,\n\t.base = %d,\n\t.scaleW = %d,\n\t.scaleH = %d,\n\t.packed = %d,\n\t.alphaChnl = %d,\n\t.redChnl = %d,\n\t.greenChnl = %d,\n\t.blueChnl = %d\n},\n\n", int(ceilf(height*float(scaleH)/100.0f)), int(ceilf(base*float(scaleH)/100.0f)), outWidth, outHeight, fourChnlPacked, alphaChnl, redChnl, greenChnl, blueChnl);
+
+		fputs(".data = (const uint8_t*)\"", f);
+		int counter = 0, base_offset = 0;
+		for (n = 0; n < maxChars; n++)
+		{
+			if (chars[n])
+			{
+				chars[n]->m_base_offset = base_offset;
+				base_offset += chars[n]->m_width * chars[n]->m_height;
+
+				cImage* ci = chars[n]->m_charImg;
+				PIXEL* px = ci->pixels;
+				for (int y = 0; y < ci->height; ++y) {
+					for (int x = 0; x < ci->width; ++x) {
+						counter = write_hex(f, px[x], counter);
+					}
+					px += ci->width;
+				}
+			}
+		}
+		fprintf(f, "\",\n.data_size = %d,\n\n", base_offset);
 	}
 	else
 	{
@@ -2244,7 +2307,7 @@ int CFontGen::SaveFont(const char *szFile)
 			unsigned char  redChnl;
 			unsigned char  greenChnl;
 			unsigned char  blueChnl;
-		} common; 
+		} common;
 #pragma pack(pop)
 
 		common.blockSize  = sizeof(common) - 4;
@@ -2275,23 +2338,12 @@ int CFontGen::SaveFont(const char *szFile)
 		}
 	}
 
-	const int maxChars = useUnicode ? maxUnicodeChar+1 : 256;
 
-	// Count the number of characters that will be written
-	int numChars = 0;
-	int n;
-	for( n = 0; n < maxChars; n++ )
-		if( chars[n] )
-			numChars++;
-
-	if( invalidCharGlyph )
-		numChars++;
-
-	if( fontDescFormat == 0 )
+	if (fontDescFormat == 0)
 		fprintf(f, "chars count=%d\r\n", numChars);
-	else if( fontDescFormat == 1 )
+	else if (fontDescFormat == 1)
 		fprintf(f, "  <chars count=\"%d\">\r\n", numChars);
-	else if( fontDescFormat == 2 )
+	else if (fontDescFormat == 2)
 	{
 		fputc(4, f); // chars type
 
@@ -2299,6 +2351,8 @@ int CFontGen::SaveFont(const char *szFile)
 		int size = (4+2+2+2+2+2+2+2+1+1)*numChars;
 		fwrite(&size, 4, 1, f);
 	}
+	else if (fontDescFormat == 3)
+		fprintf(f, ".chars_count = %d,\n.chars = (struct chardata[]){\n", numChars);
 
 	if( invalidCharGlyph )
 	{
@@ -2306,6 +2360,8 @@ int CFontGen::SaveFont(const char *szFile)
 			fprintf(f, "    <char id=\"%d\" x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" xoffset=\"%d\" yoffset=\"%d\" xadvance=\"%d\" page=\"%d\" chnl=\"%d\" />\r\n", -1, invalidCharGlyph->m_x, invalidCharGlyph->m_y, invalidCharGlyph->m_width, invalidCharGlyph->m_height, invalidCharGlyph->m_xoffset, invalidCharGlyph->m_yoffset, invalidCharGlyph->m_advance, invalidCharGlyph->m_page, invalidCharGlyph->m_chnl);
 		else if( fontDescFormat == 0 )
 			fprintf(f, "char id=%-4d x=%-5d y=%-5d width=%-5d height=%-5d xoffset=%-5d yoffset=%-5d xadvance=%-5d page=%-2d chnl=%-2d\r\n", -1, invalidCharGlyph->m_x, invalidCharGlyph->m_y, invalidCharGlyph->m_width, invalidCharGlyph->m_height, invalidCharGlyph->m_xoffset, invalidCharGlyph->m_yoffset, invalidCharGlyph->m_advance, invalidCharGlyph->m_page, invalidCharGlyph->m_chnl);
+		else if (fontDescFormat == 3)
+			fprintf(f, "\t{ .id = %4d, .width = %5d, .height = %5d, .xoffset = %5d, .yoffset = %5d, .xadvance = %5d, .offset = %2d, .chnl = %2d },\n", -1, invalidCharGlyph->m_width, invalidCharGlyph->m_height, invalidCharGlyph->m_xoffset, invalidCharGlyph->m_yoffset, invalidCharGlyph->m_advance, invalidCharGlyph->m_base_offset, invalidCharGlyph->m_chnl);
 		else
 		{
 #pragma pack(push)
@@ -2347,11 +2403,13 @@ int CFontGen::SaveFont(const char *szFile)
 			int page, chnl;
 			page = chars[n]->m_page;
 			chnl = chars[n]->m_chnl;
-			
+
 			if( fontDescFormat == 1 )
 				fprintf(f, "    <char id=\"%d\" x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" xoffset=\"%d\" yoffset=\"%d\" xadvance=\"%d\" page=\"%d\" chnl=\"%d\" />\r\n", n, chars[n]->m_x, chars[n]->m_y, chars[n]->m_width, chars[n]->m_height, chars[n]->m_xoffset, chars[n]->m_yoffset, chars[n]->m_advance, page, chnl);
 			else if( fontDescFormat == 0 )
 				fprintf(f, "char id=%-4d x=%-5d y=%-5d width=%-5d height=%-5d xoffset=%-5d yoffset=%-5d xadvance=%-5d page=%-2d chnl=%-2d\r\n", n, chars[n]->m_x, chars[n]->m_y, chars[n]->m_width, chars[n]->m_height, chars[n]->m_xoffset, chars[n]->m_yoffset, chars[n]->m_advance, page, chnl);
+			else if (fontDescFormat == 3)
+				fprintf(f, "\t{ .id = %4d, .width = %5d, .height = %5d, .xoffset = %5d, .yoffset = %5d, .xadvance = %5d, .offset = %2d, .channel = %2d },\n", n, chars[n]->m_width, chars[n]->m_height, chars[n]->m_xoffset, chars[n]->m_yoffset, chars[n]->m_advance, chars[n]->m_base_offset, chnl);
 			else
 			{
 #pragma pack(push)
@@ -2387,8 +2445,10 @@ int CFontGen::SaveFont(const char *szFile)
 		}
 	}
 
-	if( fontDescFormat == 1 )
-		fprintf(f, "  </chars>\r\n");
+	if (fontDescFormat == 1)
+		fputs("  </chars>\r\n", f);
+	else if (fontDescFormat == 3)
+		fputs("},\n\n", f);
 
 	if( !dontIncludeKerningPairs )
 	{
@@ -2396,7 +2456,7 @@ int CFontGen::SaveFont(const char *szFile)
 		vector<KERNINGPAIR> pairs;
 		if( useUnicode )
 		{
-			// TODO: How do I obtain the kerning pairs for 
+			// TODO: How do I obtain the kerning pairs for
 			// the characters in the higher planes?
 
 			int num = GetKerningPairsW(dc, 0, 0);
@@ -2455,8 +2515,8 @@ int CFontGen::SaveFont(const char *szFile)
 
 		if( pairs.size() > 0 )
 		{
-			// It's been reported that for Chinese WinXP the kerning pairs for 
-			// non-unicode charsets may contain characters > 255, so we need to 
+			// It's been reported that for Chinese WinXP the kerning pairs for
+			// non-unicode charsets may contain characters > 255, so we need to
 			// filter for this.
 			for( unsigned int n = 0; n < pairs.size(); n++ )
 			{
@@ -2478,8 +2538,8 @@ int CFontGen::SaveFont(const char *szFile)
 				}
 			}
 
-			// The list of kerning pairs returned by GetKerningPairs sometimes also 
-			// have duplicates, so that needs to be filtered too. It seems to be a bug 
+			// The list of kerning pairs returned by GetKerningPairs sometimes also
+			// have duplicates, so that needs to be filtered too. It seems to be a bug
 			// when calling GetKerningPairsA but not for W.
 			// TODO: Sometimes the adjustment is not equal for the duplicates, which should be used then?
 			if( !useUnicode )
@@ -2516,6 +2576,8 @@ int CFontGen::SaveFont(const char *szFile)
 				fwrite(&size, 4, 1, f);
 			}
 		}
+		if (fontDescFormat == 3)
+			fprintf(f, ".kernings_count = %d,\n.kernings = (struct kerning[]){\n", (int)pairs.size());
 
 		for( unsigned int n = 0; n < pairs.size(); n++ )
 		{
@@ -2523,7 +2585,9 @@ int CFontGen::SaveFont(const char *szFile)
 				fprintf(f, "    <kerning first=\"%d\" second=\"%d\" amount=\"%d\" />\r\n", pairs[n].wFirst, pairs[n].wSecond, pairs[n].iKernAmount/aa);
 			else if( fontDescFormat == 0 )
 				fprintf(f, "kerning first=%-3d second=%-3d amount=%-4d\r\n", pairs[n].wFirst, pairs[n].wSecond, pairs[n].iKernAmount/aa);
-			else 
+			else if (fontDescFormat == 3)
+				fprintf(f, "{ .first = %3d, .second = %3d, .amount = %4d },\n", pairs[n].wFirst, pairs[n].wSecond, pairs[n].iKernAmount/aa);
+			else
 			{
 #pragma pack(push)
 #pragma pack(1)
@@ -2542,11 +2606,17 @@ int CFontGen::SaveFont(const char *szFile)
 			}
 		}
 
-		if( pairs.size() > 0 && fontDescFormat == 1 )
-			fprintf(f, "  </kernings>\r\n");
+		if (fontDescFormat == 1 && pairs.size() > 0)
+			fputs("  </kernings>\r\n", f);
+		else if (fontDescFormat == 3)
+			fputs("},\n\n", f);
 	}
 
-	if( fontDescFormat == 1 ) fprintf(f, "</font>\r\n");
+	if (fontDescFormat == 1)
+		fputs("</font>\r\n", f);
+	else if (fontDescFormat==3)
+		fputs("};\n", f);
+
 
 	fclose(f);
 
@@ -2633,7 +2703,7 @@ int CFontGen::SaveConfiguration(const char *szFile)
 	FILE *f = 0;
 	errno_t e  = _wfopen_s(&f, buf, L"wb");
 	if( e != 0 || f == 0 ) return -1;
-	
+
 	// Keep the name so it can be queried later
 	fontConfigFile = filename;
 
@@ -2669,7 +2739,7 @@ int CFontGen::SaveConfiguration(const char *szFile)
 	fprintf(f, "paddingDown=%d\n", paddingDown);
 	fprintf(f, "paddingUp=%d\n", paddingUp);
 	fprintf(f, "paddingRight=%d\n", paddingRight);
-	fprintf(f, "paddingLeft=%d\n", paddingLeft);	
+	fprintf(f, "paddingLeft=%d\n", paddingLeft);
 	fprintf(f, "spacingHoriz=%d\n", spacingHoriz);
 	fprintf(f, "spacingVert=%d\n", spacingVert);
 	fprintf(f, "useFixedHeight=%d\n", fixedHeight);
@@ -2697,7 +2767,7 @@ int CFontGen::SaveConfiguration(const char *szFile)
 	fprintf(f, "outlineThickness=%d\n", outlineThickness);
 
 	fprintf(f, "\n# selected chars\n");
-	
+
 	int maxChars = useUnicode ? maxUnicodeChar+1 : 256;
 	int lastChar = -1;
 	bool isRange = false;
@@ -2715,7 +2785,7 @@ int CFontGen::SaveConfiguration(const char *szFile)
 			// Is this a range?
 			if( lastChar == n-1 )
 			{
-				if( !isRange ) 
+				if( !isRange )
 				{
 					lineLength += fprintf(f, "-");
 					isRange = true;
@@ -2766,7 +2836,7 @@ int CFontGen::LoadConfiguration(const char *filename)
 	// Reset the icon images
 	ClearIconImages();
 
-	// Read the values into temporary variables 
+	// Read the values into temporary variables
 	int    _fileVersion;            config.GetAttrAsInt("fileVersion", _fileVersion);
 	string _fontName;               config.GetAttrAsString("fontName", _fontName, 0, "Arial");
 	string _fontFile;               config.GetAttrAsString("fontFile", _fontFile, 0, "");
@@ -2857,7 +2927,7 @@ int CFontGen::LoadConfiguration(const char *filename)
 			string file;
 			file.assign(start+1, end);
 			file = acUtility::GetFullPath(filename, file);
-			
+
 			int id = 0, xoffset = 0, yoffset = 0, advance = 0;
 			if( *(end+1) == ',' )
 			{
@@ -2895,8 +2965,8 @@ int CFontGen::LoadConfiguration(const char *filename)
 	if( _outWidth < 1 ) _outWidth = 1;
 	if( _outHeight < 1 ) _outHeight = 1;
 	if( _outBitDepth != 8 && _outBitDepth != 32 ) _outBitDepth = 8;
-	if( _fontDescFormat < 0 || _fontDescFormat > 2 ) _fontDescFormat = 0;
-    
+	if( _fontDescFormat < 0 || _fontDescFormat > 3 ) _fontDescFormat = 0;
+
 	pos = _textureFormat.find_last_not_of(" \t\n\r");
 	if( pos != string::npos ) _textureFormat.erase(pos + 1);
 

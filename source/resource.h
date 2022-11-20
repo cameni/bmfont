@@ -1,28 +1,30 @@
 /*
    AngelCode Bitmap Font Generator
    Copyright (c) 2004-2020 Andreas Jonsson
-  
-   This software is provided 'as-is', without any express or implied 
-   warranty. In no event will the authors be held liable for any 
+
+   This software is provided 'as-is', without any express or implied
+   warranty. In no event will the authors be held liable for any
    damages arising from the use of this software.
 
-   Permission is granted to anyone to use this software for any 
-   purpose, including commercial applications, and to alter it and 
+   Permission is granted to anyone to use this software for any
+   purpose, including commercial applications, and to alter it and
    redistribute it freely, subject to the following restrictions:
 
-   1. The origin of this software must not be misrepresented; you 
+   1. The origin of this software must not be misrepresented; you
       must not claim that you wrote the original software. If you use
-      this software in a product, an acknowledgment in the product 
+      this software in a product, an acknowledgment in the product
       documentation would be appreciated but is not required.
 
-   2. Altered source versions must be plainly marked as such, and 
+   2. Altered source versions must be plainly marked as such, and
       must not be misrepresented as being the original software.
 
-   3. This notice may not be removed or altered from any source 
+   3. This notice may not be removed or altered from any source
       distribution.
-  
+
    Andreas Jonsson
    andreas@angelcode.com
+
+   Altered by @cameni: support for font data in C format
 */
 
 #ifndef IDC_STATIC
@@ -95,6 +97,7 @@
 #define IDC_ENABLEAA                            1050
 #define IDC_PRESETS                             1051
 #define IDC_FIXEDHEIGHT                         1052
+#define IDC_DESC_CTEXT                          1053
 #define IDC_ADAPTIVEPADFACTOR                   40000
 #define IDC_AUTOFITPAGES                        40000
 #define IDC_MINSIZE                             40001
